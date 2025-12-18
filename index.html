@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Controle Financeiro</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#667eea">
+
+</head>
+<body>
+
+    <h1>Controle Financeiro Mensal</h1>
+
+    <section>
+        <h2>Resumo do Mês</h2>
+        <p>Total de Entradas: R$ <span id="totalEntradas">0.00</span></p>
+        <p>Total de Saídas: R$ <span id="totalSaidas">0.00</span></p>
+        <p><strong>Saldo Final: R$ <span id="saldoFinal">0.00</span></strong></p>
+    </section>
+
+    <hr>
+
+    <section>
+        <h2>Entradas</h2>
+        <button onclick="adicionarEntrada()">Adicionar Entrada</button>
+        <ul id="listaEntradas"></ul>
+    </section>
+
+    <hr>
+
+    <section>
+        <h2>Saídas</h2>
+        <button onclick="adicionarSaida()">Adicionar Saída</button>
+        <ul id="listaSaidas"></ul>
+    </section>
+
+
+    <script src="script.js"></script>
+</body>
+</html>

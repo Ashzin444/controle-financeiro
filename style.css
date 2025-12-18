@@ -1,0 +1,113 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+}
+
+body {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    min-height: 100vh;
+    padding: 20px;
+    color: #333;
+}
+
+h1 {
+    text-align: center;
+    color: #fff;
+    margin-bottom: 20px;
+}
+
+section {
+    background: #fff;
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 20px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+}
+
+h2 {
+    margin-bottom: 10px;
+    color: #444;
+}
+
+p {
+    margin: 6px 0;
+}
+
+strong {
+    font-size: 1.1em;
+}
+
+button {
+    background: #667eea;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 6px 10px;
+    cursor: pointer;
+    margin-left: 6px;
+    font-size: 0.9em;
+    transition: 0.2s;
+}
+
+button:hover {
+    background: #5563d6;
+}
+
+ul {
+    list-style: none;
+    margin-top: 10px;
+}
+
+li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f4f6ff;
+    padding: 10px;
+    border-radius: 8px;
+    margin-bottom: 8px;
+}
+
+li button {
+    background: transparent;
+    color: #555;
+    font-size: 1em;
+}
+
+li button:hover {
+    color: #e63946;
+}
+
+/* ANIMAÇÕES */
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+}
+
+li {
+    animation: fadeIn 0.3s ease forwards;
+}
+
+
+
+
