@@ -1,68 +1,73 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <title>Controle Financeiro</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Controle Financeiro</title>
 
-    <link rel="stylesheet" href="style.css">
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#667eea">
+  <link rel="stylesheet" href="style.css" />
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#667eea" />
 </head>
 
 <body>
+  <!-- LOGIN -->
+  <div id="loginBox">
+    <h2>Entrar</h2>
+    <input type="email" id="email" placeholder="Email" autocomplete="email" />
+    <input type="password" id="senha" placeholder="Senha" autocomplete="current-password" />
+    <button onclick="login()">Entrar</button>
+    <p id="statusMsg" style="margin-top:12px; font-size:14px; opacity:.85;"></p>
+  </div>
 
-    <!-- LOGIN -->
-    <div id="loginBox">
-        <h2>Entrar</h2>
-        <input type="email" id="email" placeholder="Email">
-        <input type="password" id="senha" placeholder="Senha">
-        <button onclick="login()">Entrar</button>
+  <!-- APP -->
+  <div id="app" style="display:none;">
+    <div class="topBar">
+      <h1>Controle Financeiro Mensal</h1>
+      <button class="btnSecundario" onclick="logout()">Sair</button>
     </div>
 
-    <!-- APP -->
-    <div id="app" style="display:none;">
+    <section>
+      <h2>Resumo do Mês</h2>
 
-        <h1>Controle Financeiro Mensal</h1>
+      <p>Total de Entradas: R$ <span id="totalEntradas">0.00</span></p>
+      <p>Total de Saídas: R$ <span id="totalSaidas">0.00</span></p>
+      <p><strong>Saldo Final: R$ <span id="saldoFinal">0.00</span></strong></p>
 
-        <section>
-            <h2>Resumo do Mês</h2>
-            <p>Total de Entradas: R$ <span id="totalEntradas">0.00</span></p>
-            <p>Total de Saídas: R$ <span id="totalSaidas">0.00</span></p>
-            <p><strong>Saldo Final: R$ <span id="saldoFinal">0.00</span></strong></p>
-        </section>
+      <div class="acoesResumo">
+        <button onclick="testarNotificacao()">Testar Notificação</button>
+      </div>
+    </section>
 
-        <hr>
+    <hr />
 
-        <section>
-            <h2>Entradas</h2>
-            <button onclick="adicionarEntrada()">Adicionar Entrada</button>
-            <ul id="listaEntradas"></ul>
-        </section>
+    <section>
+      <h2>Entradas</h2>
+      <button onclick="adicionarEntrada()">Adicionar Entrada</button>
+      <ul id="listaEntradas"></ul>
+    </section>
 
-        <hr>
+    <hr />
 
-        <section>
-    <h2>📅 Vencimentos</h2>
-    <button onclick="adicionarVencimento()">Adicionar Vencimento</button>
-    <ul id="listaVencimentos"></ul>
-</section>
+    <section>
+      <h2>📅 Vencimentos</h2>
+      <button onclick="adicionarVencimento()">Adicionar Vencimento</button>
+      <ul id="listaVencimentos"></ul>
+    </section>
 
-        <section>
-            <h2>Saídas</h2>
-            <button onclick="adicionarSaida()">Adicionar Saída</button>
-            <ul id="listaSaidas"></ul>
-        </section>
-        
+    <section>
+      <h2>Saídas</h2>
+      <button onclick="adicionarSaida()">Adicionar Saída</button>
+      <ul id="listaSaidas"></ul>
+    </section>
+  </div>
 
-    </div>
+  <!-- FIREBASE -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
-    <!-- FIREBASE -->
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-
-    <!-- SCRIPT -->
-    <script src="script.js"></script>
-
+  <!-- SCRIPT -->
+  <script src="script.js"></script>
 </body>
 </html>
