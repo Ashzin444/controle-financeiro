@@ -1,3 +1,19 @@
+/* =========================
+   VARIÁVEIS DO TEMA (CASAL)
+========================= */
+:root {
+  --cor-primaria: #667eea;
+  --cor-secundaria: #764ba2;
+  --cor-destaque: #ff6fa7;
+
+  --cor-fundo-card: #ffffff;
+  --cor-fundo-item: #f4f6fb;
+
+  --cor-texto: #333;
+  --cor-texto-claro: #ffffff;
+}
+
+/* RESET */
 * {
   box-sizing: border-box;
   font-family: "Segoe UI", Arial, sans-serif;
@@ -7,14 +23,16 @@
 body {
   margin: 0;
   padding: 0;
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: linear-gradient(135deg, var(--cor-primaria), var(--cor-secundaria));
   min-height: 100vh;
-  color: #333;
+  color: var(--cor-texto);
 }
 
-/* LOGIN */
+/* =========================
+   LOGIN
+========================= */
 #loginBox {
-  background: white;
+  background: var(--cor-fundo-card);
   width: 90%;
   max-width: 350px;
   margin: 100px auto;
@@ -40,32 +58,33 @@ body {
 
 #loginBox button {
   width: 100%;
-  padding: 12px;
-  border: none;
-  border-radius: 8px;
-  background: #667eea;
-  color: white;
-  font-size: 16px;
-  cursor: pointer;
 }
 
-/* APP */
+/* =========================
+   APP
+========================= */
 #app {
   padding: 20px;
   max-width: 900px;
   margin: auto;
 }
 
-/* TITULO */
+/* TÍTULO */
 h1 {
   text-align: center;
-  color: white;
+  color: var(--cor-texto-claro);
   margin-bottom: 20px;
 }
 
-/* CARDS */
+h1::after {
+  content: " 💜";
+}
+
+/* =========================
+   CARDS
+========================= */
 section {
-  background: white;
+  background: var(--cor-fundo-card);
   border-radius: 12px;
   padding: 15px;
   margin-bottom: 20px;
@@ -77,14 +96,21 @@ section h2 {
   margin-top: 0;
 }
 
-/* LISTAS */
+section h2::after {
+  content: " ✨";
+  color: var(--cor-destaque);
+}
+
+/* =========================
+   LISTAS
+========================= */
 ul {
   list-style: none;
   padding: 0;
 }
 
 li {
-  background: #f4f6fb;
+  background: var(--cor-fundo-item);
   margin-bottom: 10px;
   padding: 10px;
   border-radius: 8px;
@@ -93,10 +119,12 @@ li {
   align-items: center;
 }
 
-/* BOTÕES */
+/* =========================
+   BOTÕES
+========================= */
 button {
-  background: #667eea;
-  color: white;
+  background: var(--cor-primaria);
+  color: var(--cor-texto-claro);
   border: none;
   padding: 10px 14px;
   border-radius: 6px;
@@ -107,19 +135,20 @@ button {
 }
 
 button:hover {
-  background: #556cd6;
+  background: var(--cor-secundaria);
 }
 
 button:active {
   transform: scale(0.97);
 }
 
-/* BOTÕES NAS LISTAS */
 li button {
   font-size: 14px;
 }
 
-/* RESUMO */
+/* =========================
+   RESUMO
+========================= */
 section p {
   font-size: 16px;
   display: flex;
@@ -136,7 +165,9 @@ strong {
   font-size: 18px;
 }
 
-/* ANIMAÇÃO */
+/* =========================
+   ANIMAÇÃO
+========================= */
 @keyframes fadeUp {
   from {
     opacity: 0;
@@ -148,7 +179,9 @@ strong {
   }
 }
 
-/* RESPONSIVO */
+/* =========================
+   RESPONSIVO
+========================= */
 @media (max-width: 600px) {
   li {
     flex-direction: column;
@@ -161,7 +194,6 @@ strong {
   }
 }
 
-/* TELAS MUITO PEQUENAS */
 @media (max-width: 360px) {
   h1 {
     font-size: 22px;
@@ -172,20 +204,17 @@ strong {
   }
 }
 
-/* MODO ESCURO AUTOMÁTICO */
+/* =========================
+   MODO ESCURO AUTOMÁTICO
+========================= */
 @media (prefers-color-scheme: dark) {
+  :root {
+    --cor-fundo-card: #2a2a3d;
+    --cor-fundo-item: #3a3a55;
+    --cor-texto: #eee;
+  }
+
   body {
     background: linear-gradient(135deg, #1e1e2f, #2b2b45);
-    color: #eee;
-  }
-
-  section,
-  #loginBox {
-    background: #2a2a3d;
-    color: #eee;
-  }
-
-  li {
-    background: #3a3a55;
   }
 }
