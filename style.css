@@ -84,13 +84,21 @@ hr {
   margin: auto;
 }
 
-/* Barra topo (título + sair) */
+/* Barra topo (título + ações) */
 .topBar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 10px;
+}
+
+/* NOVO: ações da topBar (Home/Sair) */
+.topBarAcoes {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
 }
 
 .btnSecundario {
@@ -110,6 +118,67 @@ h1 {
 
 h1::after {
   content: " 💜";
+}
+
+/* =========================
+   TELAS (NAVEGAÇÃO)
+========================= */
+.tela {
+  display: block;
+}
+
+/* =========================
+   HOME / MENU
+========================= */
+.cardHero {
+  border: 1px solid rgba(0,0,0,0.06);
+}
+
+.gridMenu {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.btnMenu {
+  width: 100%;
+  text-align: left;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 14px;
+  border-radius: 14px;
+  background: var(--cor-fundo-item);
+  color: var(--cor-texto);
+  border: 1px solid rgba(0,0,0,0.06);
+  transition: 0.2s;
+}
+
+.btnMenu:hover {
+  transform: translateY(-1px);
+  filter: brightness(0.99);
+}
+
+.btnMenuIcon {
+  font-size: 26px;
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  background: rgba(102,126,234,0.14);
+}
+
+.btnMenuTexto strong {
+  display: block;
+  font-size: 15px;
+}
+
+.btnMenuTexto span {
+  display: block;
+  font-size: 13px;
+  opacity: .75;
+  margin-top: 3px;
 }
 
 /* =========================
@@ -245,6 +314,120 @@ strong {
 }
 
 /* =========================
+   BOTÃO VOLTAR (FINANCEIRO)
+========================= */
+.cardVoltar {
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+  margin-bottom: 10px;
+}
+
+.btnVoltar {
+  width: 100%;
+  background: rgba(255,255,255,0.22);
+  border: 1px solid rgba(255,255,255,0.35);
+}
+
+.btnVoltar:hover {
+  background: rgba(255,255,255,0.32);
+}
+
+/* =========================
+   JOGO DA VELHA (TIC TAC TOE)
+========================= */
+.tttSala {
+  display: grid;
+  gap: 10px;
+}
+
+#tttRoomId {
+  width: 100%;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid #cfcfe6;
+  background: #fff;
+  font-size: 16px;
+  outline: none;
+  transition: 0.2s;
+}
+
+#tttRoomId:focus {
+  border-color: var(--cor-primaria);
+  box-shadow: 0 0 0 3px rgba(102,126,234,0.22);
+}
+
+.tttBotoes {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.tttBotoes button {
+  margin-left: 0;
+}
+
+.tttInfos {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.tttBadge {
+  padding: 8px 10px;
+  border-radius: 999px;
+  background: rgba(102,126,234,0.12);
+  border: 1px solid rgba(0,0,0,0.06);
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.tttTabuleiro {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  max-width: 420px;
+  margin: 0 auto;
+}
+
+.tttCasa {
+  margin-left: 0;
+  min-height: 90px;
+  border-radius: 16px;
+  background: var(--cor-fundo-item);
+  color: var(--cor-texto);
+  border: 1px solid rgba(0,0,0,0.06);
+  font-size: 40px;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+  user-select: none;
+}
+
+.tttCasa:hover {
+  filter: brightness(0.99);
+}
+
+.tttCasa:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.tttAcoes {
+  margin-top: 14px;
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.tttAcoes button {
+  margin-left: 0;
+}
+
+/* =========================
    ANIMAÇÃO
 ========================= */
 @keyframes fadeUp {
@@ -261,14 +444,28 @@ strong {
 /* =========================
    RESPONSIVO
 ========================= */
+@media (max-width: 900px) {
+  .gridMenu {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 600px) {
   .topBar {
     flex-direction: column;
     align-items: stretch;
   }
 
+  .topBarAcoes {
+    justify-content: space-between;
+  }
+
   #mesRef {
     max-width: 100%;
+  }
+
+  .gridMenu {
+    grid-template-columns: 1fr;
   }
 
   li {
@@ -288,6 +485,15 @@ strong {
     width: 100%;
     margin-top: 5px;
   }
+
+  .tttTabuleiro {
+    max-width: 100%;
+  }
+
+  .tttCasa {
+    min-height: 86px;
+    font-size: 38px;
+  }
 }
 
 @media (max-width: 360px) {
@@ -297,6 +503,11 @@ strong {
 
   button {
     font-size: 14px;
+  }
+
+  .tttCasa {
+    min-height: 78px;
+    font-size: 34px;
   }
 }
 
@@ -314,7 +525,8 @@ strong {
     background: linear-gradient(135deg, #1e1e2f, #2b2b45);
   }
 
-  #mesRef {
+  #mesRef,
+  #tttRoomId {
     background: #2a2a3d;
     color: #eee;
     border-color: rgba(255,255,255,0.18);
@@ -322,5 +534,27 @@ strong {
 
   hr {
     background: rgba(255,255,255,0.18);
+  }
+
+  /* ajustes do menu no dark */
+  .btnMenu {
+    border-color: rgba(255,255,255,0.10);
+  }
+  .btnMenuIcon {
+    background: rgba(102,126,234,0.20);
+  }
+
+  /* voltar no dark */
+  .btnVoltar {
+    border-color: rgba(255,255,255,0.22);
+  }
+
+  .tttBadge {
+    background: rgba(102,126,234,0.18);
+    border-color: rgba(255,255,255,0.10);
+  }
+
+  .tttCasa {
+    border-color: rgba(255,255,255,0.10);
   }
 }

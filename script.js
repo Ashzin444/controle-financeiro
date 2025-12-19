@@ -2,6 +2,7 @@
 const firebaseConfig = {
   apiKey: "AIzaSyDFDfIyUYtQkH_OvcuOjbwesTph2K1zzpM",
   authDomain: "controle-financeiro-casa-c5fac.firebaseapp.com",
+  // ✅ CORRIGIDO: projectId é só o ID do projeto (sem .firebaseapp.com)
   projectId: "controle-financeiro-casa-c5fac",
   storageBucket: "controle-financeiro-casa-c5fac.appspot.com",
   messagingSenderId: "47902080482",
@@ -17,7 +18,10 @@ const entradasRef = db.collection("entradas");
 const saidasRef = db.collection("saidas");
 const vencimentosRef = db.collection("vencimentos");
 
-// ================= ESTADO =================
+// ✅ NOVO: coleção do jogo da velha
+const tttRoomsRef = db.collection("tttRooms");
+
+// ================= ESTADO (FINANCEIRO) =================
 let entradas = [];
 let saidas = [];
 let vencimentos = [];
@@ -31,6 +35,83 @@ let primeiraCargaSaidas = true;
 let primeiraCargaVencimentos = true;
 
 let vencimentosInterval = null;
+
+// ================= NAVEGAÇÃO (HOME / TELAS) =================
+function irPara(tela) {
+  const mapIds = {
+    home: "telaHome",
+    financeiro: "telaFinanceiro",
+    jogos: "telaJogos",
+    cinema: "telaCinema"
+  };
+
+  Object.keys(mapIds).forEach(k => {
+    const el = document.getElementById(mapIds[k]);
+    if (el) el.style.display = (k === tela ? "block" : "none");
+  });
+
+  const titulo = document.getElementById("tituloTopBar");
+  if (titulo) {
+    const nomes = {
+      home: "Nosso Espaço",
+      financeiro: "Nosso Controle Financeiro",
+      jogos: "Jogos",
+      cinema: "Cinema"
+    };
+    titulo.textContent = nomes[tela] || "Nosso Espaço";
+  }
+
+  // Quando entrar no financeiro, garante que o mês está aplicado
+  if (tela === "financeiro") aplicarMesNoInput();
+
+  // Quando entrar em jogos, tenta “hidratar” UI do jogo (se existir no HTML)
+  if (tela === "jogos") tttRender();
+}
+
+// ================= MÊS/ANO (SEPARAÇÃO) =================
+function mesRefAtual() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+let mesSelecionado = localStorage.getItem("mesRef") || mesRefAtual();
+
+function aplicarMesNoInput() {
+  const el = document.getElementById("mesRef");
+  if (!el) return;
+
+  // evita duplicar listener
+  if (el.dataset.listenerMes === "1") {
+    el.value = mesSelecionado;
+    return;
+  }
+
+  el.value = mesSelecionado;
+
+  el.addEventListener("change", () => {
+    mesSelecionado = el.value || mesRefAtual();
+    localStorage.setItem("mesRef", mesSelecionado);
+
+    primeiraCargaEntradas = true;
+    primeiraCargaSaidas = true;
+    primeiraCargaVencimentos = true;
+
+    limparTelaMes();
+    iniciarListeners();
+  });
+
+  el.dataset.listenerMes = "1";
+}
+
+function limparTelaMes() {
+  entradas = [];
+  saidas = [];
+  vencimentos = [];
+  atualizarEntradas();
+  atualizarSaidas();
+  atualizarVencimentos();
+  atualizarSaldo();
+}
 
 // ================= UI HELPERS =================
 function setStatus(msg) {
@@ -69,22 +150,18 @@ function login() {
 }
 
 function logout() {
+  // ao sair, desconecta sala do jogo
+  tttSairDaSalaSilencioso();
   auth.signOut();
 }
 
 // ================= NOTIFICAÇÕES =================
-//
-// IMPORTANTE (MOBILE / iPhone):
-// Muitos navegadores bloqueiam notificação que não foi "desbloqueada" por clique do usuário.
-// Então criamos um "switch" de ativação e usamos ele como trava.
-//
 function pedirPermissaoNotificacao() {
   if ("Notification" in window) {
     Notification.requestPermission();
   }
 }
 
-// o usuário precisa ativar (via clique) pelo menos 1x
 function ativarNotificacoes() {
   if (!("Notification" in window)) {
     alert("Seu navegador não suporta notificações.");
@@ -111,7 +188,6 @@ function notificacoesAtivadas() {
   );
 }
 
-// Anti-spam: salva chaves notificadas
 function jaNotificado(chave) {
   const k = "notificado_" + chave;
   return localStorage.getItem(k) === "1";
@@ -121,31 +197,24 @@ function marcarNotificado(chave) {
   localStorage.setItem(k, "1");
 }
 
-// Limpa por dia (pra vencimentos não repetirem eternamente)
 function keyDiaAtual() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-// limpeza diária para não acumular keys infinitas
 function limparNotificadosAntigos() {
   const hojeKey = keyDiaAtual();
   const ultima = localStorage.getItem("notificados_ultima_limpeza");
-
   if (ultima === hojeKey) return;
 
-  // remove só os "notificado_*" (mantém o resto)
   for (let i = localStorage.length - 1; i >= 0; i--) {
     const k = localStorage.key(i);
-    if (k && k.startsWith("notificado_")) {
-      localStorage.removeItem(k);
-    }
+    if (k && k.startsWith("notificado_")) localStorage.removeItem(k);
   }
 
   localStorage.setItem("notificados_ultima_limpeza", hojeKey);
 }
 
-// Teste manual
 function testarNotificacao() {
   if (!("Notification" in window)) {
     alert("Seu navegador não suporta notificações.");
@@ -153,7 +222,6 @@ function testarNotificacao() {
   }
 
   if (Notification.permission === "granted") {
-    // já permite, mas talvez não esteja "ativado"
     localStorage.setItem("notif_ativadas", "1");
     new Notification("✅ Teste de notificação", { body: "Se você viu isso, está funcionando!" });
     return;
@@ -174,7 +242,6 @@ function testarNotificacao() {
   alert("Notificações bloqueadas. Permita nas configurações do navegador.");
 }
 
-// função central (com trava)
 function notificarUmaVez(chave, titulo, body) {
   if (!notificacoesAtivadas()) return;
   if (jaNotificado(chave)) return;
@@ -187,30 +254,36 @@ function notificarUmaVez(chave, titulo, body) {
 auth.onAuthStateChanged(user => {
   if (user) {
     mostrarApp();
+    limparNotificadosAntigos();
 
-    limparNotificadosAntigos(); // <- evita acumular chaves
+    // Vai para a HOME quando logar
+    irPara("home");
 
-    // NÃO pede permissão automaticamente (isso é bloqueado em alguns browsers)
-    // pedirPermissaoNotificacao();
+    // Financeiro
+    aplicarMesNoInput();
+    limparTelaMes();
 
-    // reset flags e listeners
     primeiraCargaEntradas = true;
     primeiraCargaSaidas = true;
     primeiraCargaVencimentos = true;
 
     iniciarListeners();
 
-    // checar vencimentos ao entrar + a cada 60s enquanto app aberto
     verificarVencimentos(true);
     if (vencimentosInterval) clearInterval(vencimentosInterval);
     vencimentosInterval = setInterval(() => verificarVencimentos(false), 60000);
 
-    // registrar SW
     registrarServiceWorker();
+
+    // Jogo da Velha: se tiver uma sala salva, tenta retomar
+    tttAutoRetomar();
   } else {
     pararListeners();
     if (vencimentosInterval) clearInterval(vencimentosInterval);
     vencimentosInterval = null;
+
+    // desconecta listeners do jogo
+    tttSairDaSalaSilencioso();
 
     mostrarLogin();
   }
@@ -219,139 +292,146 @@ auth.onAuthStateChanged(user => {
 // ================= SERVICE WORKER REGISTER =================
 function registrarServiceWorker() {
   if (!("serviceWorker" in navigator)) return;
-
   navigator.serviceWorker.register("./service-worker.js")
     .catch(err => console.log("Erro SW:", err));
 }
 
-// ================= LISTENERS FIRESTORE (sem duplicar) =================
+// ================= LISTENERS FIRESTORE (FINANCEIRO) =================
 function iniciarListeners() {
   const user = auth.currentUser;
   if (!user) return;
 
-  pararListeners(); // garante que não duplica
+  pararListeners();
 
-  unsubscribeEntradas = entradasRef.orderBy("criadoEm").onSnapshot(snapshot => {
-    entradas = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-    atualizarEntradas();
-    atualizarSaldo();
+  unsubscribeEntradas = entradasRef
+    .where("mesRef", "==", mesSelecionado)
+    .orderBy("criadoEm")
+    .onSnapshot(snapshot => {
+      entradas = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      atualizarEntradas();
+      atualizarSaldo();
 
-    if (!primeiraCargaEntradas) {
-      snapshot.docChanges().forEach(change => {
-        const d = change.doc.data();
-        if (!d) return;
+      if (!primeiraCargaEntradas) {
+        snapshot.docChanges().forEach(change => {
+          const d = change.doc.data();
+          if (!d) return;
 
-        const meuEmail = auth.currentUser?.email;
-        if (!meuEmail) return;
+          const meuEmail = auth.currentUser?.email;
+          if (!meuEmail) return;
 
-        if (d.usuario && d.usuario !== meuEmail) {
-          if (change.type === "added") {
-            notificarUmaVez(
-              `entrada_added_${change.doc.id}`,
-              "💰 Nova entrada",
-              `${d.titulo} - R$ ${Number(d.valor).toFixed(2)}`
-            );
-          } else if (change.type === "modified") {
-            notificarUmaVez(
-              `entrada_modified_${change.doc.id}_${keyDiaAtual()}`,
-              "✏️ Entrada atualizada",
-              `${d.titulo} - R$ ${Number(d.valor).toFixed(2)}`
-            );
-          } else if (change.type === "removed") {
-            notificarUmaVez(
-              `entrada_removed_${change.doc.id}_${keyDiaAtual()}`,
-              "🗑️ Entrada removida",
-              "Uma entrada foi excluída"
-            );
+          if (d.usuario && d.usuario !== meuEmail) {
+            if (change.type === "added") {
+              notificarUmaVez(
+                `entrada_added_${change.doc.id}`,
+                "💰 Nova entrada",
+                `${d.titulo} - R$ ${Number(d.valor).toFixed(2)}`
+              );
+            } else if (change.type === "modified") {
+              notificarUmaVez(
+                `entrada_modified_${change.doc.id}_${keyDiaAtual()}`,
+                "✏️ Entrada atualizada",
+                `${d.titulo} - R$ ${Number(d.valor).toFixed(2)}`
+              );
+            } else if (change.type === "removed") {
+              notificarUmaVez(
+                `entrada_removed_${change.doc.id}_${keyDiaAtual()}`,
+                "🗑️ Entrada removida",
+                "Uma entrada foi excluída"
+              );
+            }
           }
-        }
-      });
-    }
+        });
+      }
 
-    primeiraCargaEntradas = false;
-  });
+      primeiraCargaEntradas = false;
+    });
 
-  unsubscribeSaidas = saidasRef.orderBy("criadoEm").onSnapshot(snapshot => {
-    saidas = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-    atualizarSaidas();
-    atualizarSaldo();
+  unsubscribeSaidas = saidasRef
+    .where("mesRef", "==", mesSelecionado)
+    .orderBy("criadoEm")
+    .onSnapshot(snapshot => {
+      saidas = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      atualizarSaidas();
+      atualizarSaldo();
 
-    if (!primeiraCargaSaidas) {
-      snapshot.docChanges().forEach(change => {
-        const d = change.doc.data();
-        if (!d) return;
+      if (!primeiraCargaSaidas) {
+        snapshot.docChanges().forEach(change => {
+          const d = change.doc.data();
+          if (!d) return;
 
-        const meuEmail = auth.currentUser?.email;
-        if (!meuEmail) return;
+          const meuEmail = auth.currentUser?.email;
+          if (!meuEmail) return;
 
-        if (d.usuario && d.usuario !== meuEmail) {
-          if (change.type === "added") {
-            notificarUmaVez(
-              `saida_added_${change.doc.id}`,
-              "💸 Nova saída",
-              `${d.titulo} - R$ ${Number(d.valor).toFixed(2)}`
-            );
-          } else if (change.type === "modified") {
-            notificarUmaVez(
-              `saida_modified_${change.doc.id}_${keyDiaAtual()}`,
-              "✏️ Saída atualizada",
-              `${d.titulo} - R$ ${Number(d.valor).toFixed(2)}`
-            );
-          } else if (change.type === "removed") {
-            notificarUmaVez(
-              `saida_removed_${change.doc.id}_${keyDiaAtual()}`,
-              "🗑️ Saída removida",
-              "Uma saída foi excluída"
-            );
+          if (d.usuario && d.usuario !== meuEmail) {
+            if (change.type === "added") {
+              notificarUmaVez(
+                `saida_added_${change.doc.id}`,
+                "💸 Nova saída",
+                `${d.titulo} - R$ ${Number(d.valor).toFixed(2)}`
+              );
+            } else if (change.type === "modified") {
+              notificarUmaVez(
+                `saida_modified_${change.doc.id}_${keyDiaAtual()}`,
+                "✏️ Saída atualizada",
+                `${d.titulo} - R$ ${Number(d.valor).toFixed(2)}`
+              );
+            } else if (change.type === "removed") {
+              notificarUmaVez(
+                `saida_removed_${change.doc.id}_${keyDiaAtual()}`,
+                "🗑️ Saída removida",
+                "Uma saída foi excluída"
+              );
+            }
           }
-        }
-      });
-    }
+        });
+      }
 
-    primeiraCargaSaidas = false;
-  });
+      primeiraCargaSaidas = false;
+    });
 
-  unsubscribeVencimentos = vencimentosRef.orderBy("dia").onSnapshot(snapshot => {
-    vencimentos = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-    atualizarVencimentos();
+  unsubscribeVencimentos = vencimentosRef
+    .where("mesRef", "==", mesSelecionado)
+    .orderBy("dia")
+    .onSnapshot(snapshot => {
+      vencimentos = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      atualizarVencimentos();
 
-    if (!primeiraCargaVencimentos) {
-      snapshot.docChanges().forEach(change => {
-        const d = change.doc.data();
-        if (!d) return;
+      if (!primeiraCargaVencimentos) {
+        snapshot.docChanges().forEach(change => {
+          const d = change.doc.data();
+          if (!d) return;
 
-        const meuEmail = auth.currentUser?.email;
-        if (!meuEmail) return;
+          const meuEmail = auth.currentUser?.email;
+          if (!meuEmail) return;
 
-        if (d.usuario && d.usuario !== meuEmail) {
-          if (change.type === "added") {
-            notificarUmaVez(
-              `venc_added_${change.doc.id}`,
-              "📅 Novo vencimento",
-              `${d.titulo} (dia ${d.dia}) - R$ ${Number(d.valor).toFixed(2)}`
-            );
-          } else if (change.type === "modified") {
-            const status = d.pago ? "Pago ✅" : "Atualizado ✏️";
-            notificarUmaVez(
-              `venc_modified_${change.doc.id}_${keyDiaAtual()}`,
-              `📅 Vencimento ${status}`,
-              `${d.titulo} (dia ${d.dia})`
-            );
-          } else if (change.type === "removed") {
-            notificarUmaVez(
-              `venc_removed_${change.doc.id}_${keyDiaAtual()}`,
-              "🗑️ Vencimento removido",
-              "Um vencimento foi excluído"
-            );
+          if (d.usuario && d.usuario !== meuEmail) {
+            if (change.type === "added") {
+              notificarUmaVez(
+                `venc_added_${change.doc.id}`,
+                "📅 Novo vencimento",
+                `${d.titulo} (dia ${d.dia}) - R$ ${Number(d.valor).toFixed(2)}`
+              );
+            } else if (change.type === "modified") {
+              const status = d.pago ? "Pago ✅" : "Atualizado ✏️";
+              notificarUmaVez(
+                `venc_modified_${change.doc.id}_${keyDiaAtual()}`,
+                `📅 Vencimento ${status}`,
+                `${d.titulo} (dia ${d.dia})`
+              );
+            } else if (change.type === "removed") {
+              notificarUmaVez(
+                `venc_removed_${change.doc.id}_${keyDiaAtual()}`,
+                "🗑️ Vencimento removido",
+                "Um vencimento foi excluído"
+              );
+            }
           }
-        }
-      });
-    }
+        });
+      }
 
-    primeiraCargaVencimentos = false;
-
-    verificarVencimentos(false);
-  });
+      primeiraCargaVencimentos = false;
+      verificarVencimentos(false);
+    });
 }
 
 function pararListeners() {
@@ -363,20 +443,20 @@ function pararListeners() {
   unsubscribeVencimentos = null;
 }
 
-// ================= ADICIONAR =================
+// ================= ADICIONAR (FINANCEIRO) =================
 function adicionarEntrada() {
   const user = auth.currentUser;
   if (!user) return alert("Faça login.");
 
   const titulo = prompt("Nome da entrada:");
   const valor = Number.parseFloat(prompt("Valor:"));
-
   if (!titulo || Number.isNaN(valor)) return alert("Dados inválidos");
 
   entradasRef.add({
     titulo,
     valor,
     usuario: user.email,
+    mesRef: mesSelecionado,
     criadoEm: firebase.firestore.FieldValue.serverTimestamp()
   });
 }
@@ -387,13 +467,13 @@ function adicionarSaida() {
 
   const titulo = prompt("Nome da saída:");
   const valor = Number.parseFloat(prompt("Valor:"));
-
   if (!titulo || Number.isNaN(valor)) return alert("Dados inválidos");
 
   saidasRef.add({
     titulo,
     valor,
     usuario: user.email,
+    mesRef: mesSelecionado,
     criadoEm: firebase.firestore.FieldValue.serverTimestamp()
   });
 }
@@ -415,16 +495,18 @@ function adicionarVencimento() {
     valor,
     dia,
     pago: false,
-    usuario: user.email
+    usuario: user.email,
+    mesRef: mesSelecionado
   });
 }
 
-// ================= LISTAS =================
+// ================= LISTAS (FINANCEIRO) =================
 function atualizarEntradas() {
   const lista = document.getElementById("listaEntradas");
   const total = document.getElementById("totalEntradas");
-  lista.innerHTML = "";
+  if (!lista || !total) return;
 
+  lista.innerHTML = "";
   let soma = 0;
 
   entradas.forEach(e => {
@@ -447,8 +529,9 @@ function atualizarEntradas() {
 function atualizarSaidas() {
   const lista = document.getElementById("listaSaidas");
   const total = document.getElementById("totalSaidas");
-  lista.innerHTML = "";
+  if (!lista || !total) return;
 
+  lista.innerHTML = "";
   let soma = 0;
 
   saidas.forEach(s => {
@@ -469,21 +552,20 @@ function atualizarSaidas() {
 }
 
 function atualizarSaldo() {
+  const elSaldo = document.getElementById("saldoFinal");
+  const elEntradas = document.getElementById("totalEntradas");
+  const elSaidas = document.getElementById("totalSaidas");
+  if (!elSaldo || !elEntradas || !elSaidas) return;
+
   const totalEntradas = entradas.reduce((acc, cur) => acc + (Number(cur.valor) || 0), 0);
   const totalSaidas = saidas.reduce((acc, cur) => acc + (Number(cur.valor) || 0), 0);
 
-  document.getElementById("saldoFinal").textContent =
-    (totalEntradas - totalSaidas).toFixed(2);
+  elSaldo.textContent = (totalEntradas - totalSaidas).toFixed(2);
 }
 
-// ================= EDITAR / EXCLUIR =================
-function excluirEntrada(id) {
-  entradasRef.doc(id).delete();
-}
-
-function excluirSaida(id) {
-  saidasRef.doc(id).delete();
-}
+// ================= EDITAR / EXCLUIR (FINANCEIRO) =================
+function excluirEntrada(id) { entradasRef.doc(id).delete(); }
+function excluirSaida(id) { saidasRef.doc(id).delete(); }
 
 function editarEntrada(id) {
   const e = entradas.find(x => x.id === id);
@@ -491,7 +573,6 @@ function editarEntrada(id) {
 
   const titulo = prompt("Editar nome:", e.titulo);
   const valor = Number.parseFloat(prompt("Editar valor:", e.valor));
-
   if (!titulo || Number.isNaN(valor)) return;
 
   entradasRef.doc(id).update({ titulo, valor });
@@ -503,17 +584,17 @@ function editarSaida(id) {
 
   const titulo = prompt("Editar nome:", s.titulo);
   const valor = Number.parseFloat(prompt("Editar valor:", s.valor));
-
   if (!titulo || Number.isNaN(valor)) return;
 
   saidasRef.doc(id).update({ titulo, valor });
 }
 
-// ================= VENCIMENTOS =================
+// ================= VENCIMENTOS (FINANCEIRO) =================
 function atualizarVencimentos() {
   const lista = document.getElementById("listaVencimentos");
-  lista.innerHTML = "";
+  if (!lista) return;
 
+  lista.innerHTML = "";
   const hoje = new Date().getDate();
 
   vencimentos.forEach(v => {
@@ -552,7 +633,6 @@ function excluirVencimento(id) {
   vencimentosRef.doc(id).delete();
 }
 
-// ================= NOTIFICAÇÃO DE VENCIMENTO (app aberto) =================
 function verificarVencimentos(forcar) {
   if (!notificacoesAtivadas()) return;
   if (!Array.isArray(vencimentos) || vencimentos.length === 0) return;
@@ -576,3 +656,332 @@ function verificarVencimentos(forcar) {
     }
   });
 }
+
+/* =========================================================
+   JOGO DA VELHA (Tempo real com Firestore)
+   - 1 sala = 1 doc em tttRooms
+   - 2 jogadores (X e O)
+   - turn: "X" ou "O"
+========================================================= */
+
+let tttRoomId = localStorage.getItem("ttt_roomId") || "";
+let tttPlayer = localStorage.getItem("ttt_player") || ""; // "X" / "O"
+let tttUnsub = null;
+let tttState = null;
+
+function tttAutoRetomar() {
+  // só tenta retomar se tem sala salva
+  if (!tttRoomId) return;
+  // não força navegar pra tela jogos, só prepara snapshot
+  tttEntrarSala(tttRoomId, true).catch(() => {
+    // se deu ruim (sala apagada), limpa
+    localStorage.removeItem("ttt_roomId");
+    localStorage.removeItem("ttt_player");
+    tttRoomId = "";
+    tttPlayer = "";
+  });
+}
+
+function tttGetEl(id) {
+  return document.getElementById(id);
+}
+
+function tttSetText(id, txt) {
+  const el = tttGetEl(id);
+  if (el) el.textContent = txt;
+}
+
+function tttRender() {
+  // atualiza UI se existir no HTML
+  const inp = tttGetEl("tttRoomId");
+  if (inp && tttRoomId) inp.value = tttRoomId;
+
+  if (!tttState) {
+    tttSetText("tttStatus", "Entre ou crie uma sala para começar 💜");
+    tttSetText("tttMe", tttPlayer ? `Você: ${tttPlayer}` : "Você: —");
+    tttSetText("tttTurn", "Vez: —");
+    tttSetText("tttRoomBadge", tttRoomId ? `Sala: ${tttRoomId}` : "Sala: —");
+    // tabuleiro “limpo”
+    for (let i = 0; i < 9; i++) tttSetText(`tttCell${i}`, "");
+    return;
+  }
+
+  tttSetText("tttRoomBadge", `Sala: ${tttRoomId || tttState.roomId || "—"}`);
+  tttSetText("tttMe", tttPlayer ? `Você: ${tttPlayer}` : "Você: —");
+
+  const status = tttState.status || "waiting";
+  const turn = tttState.turn || "X";
+  const winner = tttState.winner || "";
+
+  if (status === "waiting") {
+    tttSetText("tttStatus", "Aguardando o(a) outro(a) entrar na sala…");
+  } else if (status === "playing") {
+    tttSetText("tttStatus", winner ? `Fim de jogo! Vencedor: ${winner}` : "Partida em andamento 🔥");
+  } else if (status === "finished") {
+    tttSetText("tttStatus", winner ? `🎉 Vitória do ${winner}!` : "🤝 Empate!");
+  } else {
+    tttSetText("tttStatus", "—");
+  }
+
+  tttSetText("tttTurn", winner ? "Vez: —" : `Vez: ${turn}`);
+
+  const b = Array.isArray(tttState.board) ? tttState.board : Array(9).fill("");
+  for (let i = 0; i < 9; i++) tttSetText(`tttCell${i}`, b[i] || "");
+
+  // habilita/desabilita botões de casa (se existir)
+  const podeJogarAgora =
+    status === "playing" &&
+    !winner &&
+    tttPlayer &&
+    turn === tttPlayer;
+
+  for (let i = 0; i < 9; i++) {
+    const btn = tttGetEl(`tttBtn${i}`);
+    if (!btn) continue;
+    const ocupado = (b[i] || "") !== "";
+    btn.disabled = !podeJogarAgora || ocupado;
+  }
+}
+
+function tttGerarIdCurto() {
+  // 6 chars base36
+  return Math.random().toString(36).slice(2, 8).toUpperCase();
+}
+
+async function tttCriarSala() {
+  const user = auth.currentUser;
+  if (!user) return alert("Faça login.");
+
+  const roomId = tttGerarIdCurto();
+  const docRef = tttRoomsRef.doc(roomId);
+
+  await docRef.set({
+    roomId,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+    players: {
+      X: user.email,
+      O: null
+    },
+    board: Array(9).fill(""),
+    turn: "X",
+    status: "waiting", // waiting | playing | finished
+    winner: "",
+    moves: 0,
+    lastMoveAt: null
+  });
+
+  await tttEntrarSala(roomId, false);
+}
+
+async function tttEntrarSalaPeloInput() {
+  const inp = tttGetEl("tttRoomId");
+  const roomId = (inp?.value || "").trim().toUpperCase();
+  if (!roomId) return alert("Digite o ID da sala.");
+  await tttEntrarSala(roomId, false);
+}
+
+async function tttEntrarSala(roomId, silencioso) {
+  const user = auth.currentUser;
+  if (!user) {
+    if (!silencioso) alert("Faça login.");
+    return;
+  }
+
+  // se já estava em outra sala, desliga listener
+  if (tttUnsub) {
+    tttUnsub();
+    tttUnsub = null;
+  }
+
+  const docRef = tttRoomsRef.doc(roomId);
+  const snap = await docRef.get();
+  if (!snap.exists) {
+    if (!silencioso) alert("Sala não existe. Confira o ID.");
+    throw new Error("Sala não existe");
+  }
+
+  const data = snap.data() || {};
+  const players = data.players || {};
+
+  // decide se você é X ou O
+  let meuSimbolo = "";
+  if (players.X === user.email) meuSimbolo = "X";
+  else if (players.O === user.email) meuSimbolo = "O";
+  else if (!players.X) meuSimbolo = "X";
+  else if (!players.O) meuSimbolo = "O";
+  else {
+    if (!silencioso) alert("Sala cheia (já tem 2 jogadores).");
+    throw new Error("Sala cheia");
+  }
+
+  // escreve player se necessário
+  const updates = {};
+  if (meuSimbolo === "X" && players.X !== user.email) updates["players.X"] = user.email;
+  if (meuSimbolo === "O" && players.O !== user.email) updates["players.O"] = user.email;
+
+  // se agora tem os dois, vira playing
+  const novoPlayers = {
+    X: (updates["players.X"] || players.X || null),
+    O: (updates["players.O"] || players.O || null)
+  };
+
+  if (novoPlayers.X && novoPlayers.O && data.status === "waiting") {
+    updates.status = "playing";
+    updates.turn = "X";
+  }
+
+  if (Object.keys(updates).length) await docRef.update(updates);
+
+  // salva local
+  tttRoomId = roomId;
+  tttPlayer = meuSimbolo;
+  localStorage.setItem("ttt_roomId", tttRoomId);
+  localStorage.setItem("ttt_player", tttPlayer);
+
+  // ativa listener realtime
+  tttUnsub = docRef.onSnapshot(s => {
+    if (!s.exists) {
+      // sala foi apagada
+      tttState = null;
+      tttRender();
+      return;
+    }
+    tttState = s.data() || null;
+    tttRender();
+  });
+
+  // se usuário entrou pelo fluxo normal, já manda pra tela jogos
+  if (!silencioso) irPara("jogos");
+}
+
+function tttSairDaSala() {
+  tttSairDaSalaSilencioso();
+  alert("Você saiu da sala.");
+}
+
+function tttSairDaSalaSilencioso() {
+  if (tttUnsub) {
+    tttUnsub();
+    tttUnsub = null;
+  }
+  tttState = null;
+  tttRoomId = "";
+  tttPlayer = "";
+  localStorage.removeItem("ttt_roomId");
+  localStorage.removeItem("ttt_player");
+  tttRender();
+}
+
+function tttLinhasVitoria() {
+  return [
+    [0,1,2],[3,4,5],[6,7,8],
+    [0,3,6],[1,4,7],[2,5,8],
+    [0,4,8],[2,4,6]
+  ];
+}
+
+function tttChecarResultado(board) {
+  for (const [a,b,c] of tttLinhasVitoria()) {
+    if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+      return { winner: board[a], finished: true };
+    }
+  }
+  const cheio = board.every(x => x);
+  if (cheio) return { winner: "", finished: true };
+  return { winner: "", finished: false };
+}
+
+async function tttJogar(pos) {
+  const user = auth.currentUser;
+  if (!user) return alert("Faça login.");
+  if (!tttRoomId) return alert("Entre em uma sala.");
+
+  const docRef = tttRoomsRef.doc(tttRoomId);
+
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(docRef);
+    if (!snap.exists) throw new Error("Sala não existe");
+
+    const data = snap.data() || {};
+    const status = data.status || "waiting";
+    const turn = data.turn || "X";
+    const players = data.players || {};
+    const board = Array.isArray(data.board) ? [...data.board] : Array(9).fill("");
+    const winner = data.winner || "";
+
+    if (status !== "playing") throw new Error("Partida não está em andamento");
+    if (winner) throw new Error("Partida já terminou");
+    if (!tttPlayer) throw new Error("Sem símbolo");
+
+    // valida player
+    if (tttPlayer === "X" && players.X !== user.email) throw new Error("Você não é o X desta sala");
+    if (tttPlayer === "O" && players.O !== user.email) throw new Error("Você não é o O desta sala");
+
+    // valida turno
+    if (turn !== tttPlayer) throw new Error("Não é sua vez");
+
+    // valida casa
+    if (pos < 0 || pos > 8) throw new Error("Posição inválida");
+    if (board[pos]) throw new Error("Casa ocupada");
+
+    board[pos] = tttPlayer;
+
+    const res = tttChecarResultado(board);
+    const updates = {
+      board,
+      moves: (Number(data.moves) || 0) + 1,
+      lastMoveAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+
+    if (res.finished) {
+      updates.status = "finished";
+      updates.winner = res.winner || "";
+    } else {
+      updates.turn = (tttPlayer === "X" ? "O" : "X");
+    }
+
+    tx.update(docRef, updates);
+  }).catch(err => {
+    // não explode a UX, só avisa
+    alert(err.message || "Não foi possível jogar agora.");
+  });
+}
+
+async function tttReiniciar() {
+  const user = auth.currentUser;
+  if (!user) return alert("Faça login.");
+  if (!tttRoomId) return alert("Entre em uma sala.");
+
+  const docRef = tttRoomsRef.doc(tttRoomId);
+
+  // só quem está na sala pode reiniciar
+  const snap = await docRef.get();
+  if (!snap.exists) return alert("Sala não existe.");
+
+  const data = snap.data() || {};
+  const players = data.players || {};
+
+  const meuEmail = user.email;
+  if (players.X !== meuEmail && players.O !== meuEmail) {
+    return alert("Você não faz parte desta sala.");
+  }
+
+  await docRef.update({
+    board: Array(9).fill(""),
+    turn: "X",
+    status: (players.X && players.O) ? "playing" : "waiting",
+    winner: "",
+    moves: 0,
+    lastMoveAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+}
+
+// =========================================================
+// ✅ FUNÇÕES GLOBAIS pra botões do HTML do jogo
+// (deixe assim, pra poder usar onclick="...")
+// =========================================================
+window.tttCriarSala = tttCriarSala;
+window.tttEntrarSalaPeloInput = tttEntrarSalaPeloInput;
+window.tttSairDaSala = tttSairDaSala;
+window.tttReiniciar = tttReiniciar;
+window.tttJogar = tttJogar;

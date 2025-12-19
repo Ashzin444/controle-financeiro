@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Controle Financeiro</title>
+  <title>Nosso Espaço</title>
 
   <link rel="stylesheet" href="style.css" />
   <link rel="manifest" href="manifest.json" />
@@ -22,55 +22,175 @@
 
   <!-- APP -->
   <div id="app" style="display:none;">
+
+    <!-- TOPBAR GLOBAL -->
     <div class="topBar">
-      <h1>Controle Financeiro Mensal</h1>
-      <button class="btnSecundario" onclick="logout()">Sair</button>
+      <h1 id="tituloTopBar">Nosso Espaço</h1>
+
+      <div class="topBarAcoes">
+        <button class="btnSecundario" onclick="irPara('home')">🏠 Home</button>
+        <button class="btnSecundario" onclick="logout()">Sair</button>
+      </div>
     </div>
 
-    <!-- MÊS -->
-    <section>
-      <h2>🗓️ Mês</h2>
-      <input id="mesRef" type="month" />
-    </section>
+    <!-- =====================
+         TELA HOME (MENU)
+    ====================== -->
+    <div id="telaHome" class="tela">
+      <section class="cardHero">
+        <h2>Bem-vindos ao nosso cantinho 💜</h2>
+        <p style="margin:0; opacity:.85;">
+          Seu espaço exclusivo de vocês dois: finanças, jogos e cinema juntos.
+        </p>
+      </section>
 
-    <!-- RESUMO -->
-    <section>
-      <h2>Resumo do Mês</h2>
+      <section>
+        <h2>Escolha uma área</h2>
 
-      <p>Total de Entradas: R$ <span id="totalEntradas">0.00</span></p>
-      <p>Total de Saídas: R$ <span id="totalSaidas">0.00</span></p>
-      <p><strong>Saldo Final: R$ <span id="saldoFinal">0.00</span></strong></p>
+        <div class="gridMenu">
+          <button class="btnMenu" onclick="irPara('financeiro')">
+            <div class="btnMenuIcon">💰</div>
+            <div class="btnMenuTexto">
+              <strong>Nosso Controle Financeiro</strong>
+              <span>Entradas, saídas e vencimentos</span>
+            </div>
+          </button>
 
-      <div class="acoesResumo">
-        <button onclick="ativarNotificacoes()">Ativar Notificações</button>
-        <button onclick="testarNotificacao()">Testar Notificação</button>
-      </div>
-    </section>
+          <button class="btnMenu" onclick="irPara('jogos')">
+            <div class="btnMenuIcon">🎮</div>
+            <div class="btnMenuTexto">
+              <strong>Jogos</strong>
+              <span>Jogar juntos em tempo real</span>
+            </div>
+          </button>
 
-    <hr />
+          <button class="btnMenu" onclick="irPara('cinema')">
+            <div class="btnMenuIcon">🎬</div>
+            <div class="btnMenuTexto">
+              <strong>Cinema</strong>
+              <span>Assistir juntos com sala</span>
+            </div>
+          </button>
+        </div>
+      </section>
+    </div>
 
-    <!-- ENTRADAS -->
-    <section>
-      <h2>Entradas</h2>
-      <button onclick="adicionarEntrada()">Adicionar Entrada</button>
-      <ul id="listaEntradas"></ul>
-    </section>
+    <!-- =====================
+         TELA FINANCEIRO
+    ====================== -->
+    <div id="telaFinanceiro" class="tela" style="display:none;">
 
-    <hr />
+      <section class="cardVoltar">
+        <button class="btnVoltar" onclick="irPara('home')">⬅️ Voltar</button>
+      </section>
 
-    <!-- VENCIMENTOS -->
-    <section>
-      <h2>📅 Vencimentos</h2>
-      <button onclick="adicionarVencimento()">Adicionar Vencimento</button>
-      <ul id="listaVencimentos"></ul>
-    </section>
+      <!-- MÊS -->
+      <section>
+        <h2>🗓️ Mês</h2>
+        <input id="mesRef" type="month" />
+      </section>
 
-    <!-- SAÍDAS -->
-    <section>
-      <h2>Saídas</h2>
-      <button onclick="adicionarSaida()">Adicionar Saída</button>
-      <ul id="listaSaidas"></ul>
-    </section>
+      <!-- RESUMO -->
+      <section>
+        <h2>Resumo do Mês</h2>
+
+        <p>Total de Entradas: R$ <span id="totalEntradas">0.00</span></p>
+        <p>Total de Saídas: R$ <span id="totalSaidas">0.00</span></p>
+        <p><strong>Saldo Final: R$ <span id="saldoFinal">0.00</span></strong></p>
+
+        <div class="acoesResumo">
+          <button onclick="ativarNotificacoes()">Ativar Notificações</button>
+          <button onclick="testarNotificacao()">Testar Notificação</button>
+        </div>
+      </section>
+
+      <hr />
+
+      <!-- ENTRADAS -->
+      <section>
+        <h2>Entradas</h2>
+        <button onclick="adicionarEntrada()">Adicionar Entrada</button>
+        <ul id="listaEntradas"></ul>
+      </section>
+
+      <hr />
+
+      <!-- VENCIMENTOS -->
+      <section>
+        <h2>📅 Vencimentos</h2>
+        <button onclick="adicionarVencimento()">Adicionar Vencimento</button>
+        <ul id="listaVencimentos"></ul>
+      </section>
+
+      <!-- SAÍDAS -->
+      <section>
+        <h2>Saídas</h2>
+        <button onclick="adicionarSaida()">Adicionar Saída</button>
+        <ul id="listaSaidas"></ul>
+      </section>
+    </div>
+
+    <!-- =====================
+         TELA JOGOS
+    ====================== -->
+    <div id="telaJogos" class="tela" style="display:none;">
+      <section class="cardHero">
+        <h2>🎮 Jogos</h2>
+        <p style="margin:0; opacity:.85;">Joguem juntos em tempo real 💜</p>
+      </section>
+
+      <section>
+        <h2>❌⭕ Jogo da Velha (tempo real)</h2>
+
+        <div class="tttSala">
+          <input id="tttRoomId" type="text" placeholder="Código da sala (ex: A1B2C3)" />
+          <div class="tttBotoes">
+            <button onclick="tttCriarSala()">Criar sala</button>
+            <button onclick="tttEntrarSala()">Entrar na sala</button>
+            <button class="btnSecundario" onclick="tttSairSala()">Sair</button>
+          </div>
+          <p id="tttStatus" style="margin:10px 0 0; opacity:.85;"></p>
+        </div>
+
+        <div id="tttAreaJogo" style="display:none; margin-top:14px;">
+          <div class="tttInfos">
+            <span id="tttMeuSimbolo" class="tttBadge">Você: -</span>
+            <span id="tttVez" class="tttBadge">Vez: -</span>
+            <span id="tttResultado" class="tttBadge">Resultado: -</span>
+          </div>
+
+          <div class="tttTabuleiro" id="tttTabuleiro">
+            <button class="tttCasa" onclick="tttClique(0)"></button>
+            <button class="tttCasa" onclick="tttClique(1)"></button>
+            <button class="tttCasa" onclick="tttClique(2)"></button>
+            <button class="tttCasa" onclick="tttClique(3)"></button>
+            <button class="tttCasa" onclick="tttClique(4)"></button>
+            <button class="tttCasa" onclick="tttClique(5)"></button>
+            <button class="tttCasa" onclick="tttClique(6)"></button>
+            <button class="tttCasa" onclick="tttClique(7)"></button>
+            <button class="tttCasa" onclick="tttClique(8)"></button>
+          </div>
+
+          <div class="tttAcoes">
+            <button onclick="tttReiniciar()">Reiniciar partida</button>
+            <button class="btnSecundario" onclick="irPara('home')">⬅️ Voltar pro Home</button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- =====================
+         TELA CINEMA
+    ====================== -->
+    <div id="telaCinema" class="tela" style="display:none;">
+      <section>
+        <h2>🎬 Cinema</h2>
+        <p style="margin:0; opacity:.85;">
+          Em breve: sala com sincronização e chat 💜
+        </p>
+      </section>
+    </div>
+
   </div>
 
   <!-- FIREBASE -->
