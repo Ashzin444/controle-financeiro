@@ -32,26 +32,13 @@ let primeiraCargaVencimentos = true;
 
 let vencimentosInterval = null;
 
-// ================= MÊS =================
-function mesRefAtual() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-}
-
-let mesSelecionado = localStorage.getItem("mesRef") || mesRefAtual();
-
-function aplicarMesNoInput() {
-  const el = document.getElementById("mesRef");
-  if (!el) return;
-  el.value = mesSelecionado;
-  el.addEventListener("change", () => {
-    mesSelecionado = el.value || mesRefAtual();
-    localStorage.setItem("mesRef", mesSelecionado);
-    iniciarListeners(); // recarrega snapshots com filtro do mês
-  });
-}
-
 // ================= UI HELPERS =================
+function setStatus(msg) {
+  const el = document.getElementById("statusMsg");
+  if (!el) return;
+  el.textContent = msg || "";
+}
+
 function mostrarApp() {
   document.getElementById("loginBox").style.display = "none";
   document.getElementById("app").style.display = "block";
@@ -72,8 +59,13 @@ function login() {
     return;
   }
 
+  setStatus("Entrando...");
   auth.signInWithEmailAndPassword(email, senha)
-    .catch(err => alert("Erro: " + err.message));
+    .then(() => setStatus(""))
+    .catch(err => {
+      setStatus("");
+      alert("Erro: " + err.message);
+    });
 }
 
 function logout() {
@@ -81,14 +73,42 @@ function logout() {
 }
 
 // ================= NOTIFICAÇÕES =================
+//
+// IMPORTANTE (MOBILE / iPhone):
+// Muitos navegadores bloqueiam notificação que não foi "desbloqueada" por clique do usuário.
+// Então criamos um "switch" de ativação e usamos ele como trava.
+//
 function pedirPermissaoNotificacao() {
   if ("Notification" in window) {
     Notification.requestPermission();
   }
 }
 
-function podeNotificar() {
-  return ("Notification" in window) && Notification.permission === "granted";
+// o usuário precisa ativar (via clique) pelo menos 1x
+function ativarNotificacoes() {
+  if (!("Notification" in window)) {
+    alert("Seu navegador não suporta notificações.");
+    return;
+  }
+
+  Notification.requestPermission().then(p => {
+    if (p === "granted") {
+      localStorage.setItem("notif_ativadas", "1");
+      new Notification("✅ Notificações ativadas!", {
+        body: "Agora o app pode te avisar quando tiver mudanças."
+      });
+    } else {
+      alert("Permissão não concedida.");
+    }
+  });
+}
+
+function notificacoesAtivadas() {
+  return (
+    ("Notification" in window) &&
+    Notification.permission === "granted" &&
+    localStorage.getItem("notif_ativadas") === "1"
+  );
 }
 
 // Anti-spam: salva chaves notificadas
@@ -101,30 +121,48 @@ function marcarNotificado(chave) {
   localStorage.setItem(k, "1");
 }
 
+// Limpa por dia (pra vencimentos não repetirem eternamente)
 function keyDiaAtual() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-function notificarUmaVez(chave, titulo, body) {
-  if (!podeNotificar()) return;
-  if (jaNotificado(chave)) return;
-  new Notification(titulo, { body });
-  marcarNotificado(chave);
+// limpeza diária para não acumular keys infinitas
+function limparNotificadosAntigos() {
+  const hojeKey = keyDiaAtual();
+  const ultima = localStorage.getItem("notificados_ultima_limpeza");
+
+  if (ultima === hojeKey) return;
+
+  // remove só os "notificado_*" (mantém o resto)
+  for (let i = localStorage.length - 1; i >= 0; i--) {
+    const k = localStorage.key(i);
+    if (k && k.startsWith("notificado_")) {
+      localStorage.removeItem(k);
+    }
+  }
+
+  localStorage.setItem("notificados_ultima_limpeza", hojeKey);
 }
 
+// Teste manual
 function testarNotificacao() {
   if (!("Notification" in window)) {
     alert("Seu navegador não suporta notificações.");
     return;
   }
+
   if (Notification.permission === "granted") {
+    // já permite, mas talvez não esteja "ativado"
+    localStorage.setItem("notif_ativadas", "1");
     new Notification("✅ Teste de notificação", { body: "Se você viu isso, está funcionando!" });
     return;
   }
+
   if (Notification.permission !== "denied") {
     Notification.requestPermission().then(p => {
       if (p === "granted") {
+        localStorage.setItem("notif_ativadas", "1");
         new Notification("✅ Teste de notificação", { body: "Permissão concedida!" });
       } else {
         alert("Permissão negada.");
@@ -132,26 +170,42 @@ function testarNotificacao() {
     });
     return;
   }
+
   alert("Notificações bloqueadas. Permita nas configurações do navegador.");
+}
+
+// função central (com trava)
+function notificarUmaVez(chave, titulo, body) {
+  if (!notificacoesAtivadas()) return;
+  if (jaNotificado(chave)) return;
+
+  new Notification(titulo, { body });
+  marcarNotificado(chave);
 }
 
 // ================= AUTH =================
 auth.onAuthStateChanged(user => {
   if (user) {
     mostrarApp();
-    aplicarMesNoInput();
-    pedirPermissaoNotificacao();
 
+    limparNotificadosAntigos(); // <- evita acumular chaves
+
+    // NÃO pede permissão automaticamente (isso é bloqueado em alguns browsers)
+    // pedirPermissaoNotificacao();
+
+    // reset flags e listeners
     primeiraCargaEntradas = true;
     primeiraCargaSaidas = true;
     primeiraCargaVencimentos = true;
 
     iniciarListeners();
 
+    // checar vencimentos ao entrar + a cada 60s enquanto app aberto
     verificarVencimentos(true);
     if (vencimentosInterval) clearInterval(vencimentosInterval);
     vencimentosInterval = setInterval(() => verificarVencimentos(false), 60000);
 
+    // registrar SW
     registrarServiceWorker();
   } else {
     pararListeners();
@@ -165,87 +219,139 @@ auth.onAuthStateChanged(user => {
 // ================= SERVICE WORKER REGISTER =================
 function registrarServiceWorker() {
   if (!("serviceWorker" in navigator)) return;
-  navigator.serviceWorker.register("./service-worker.js").catch(() => {});
+
+  navigator.serviceWorker.register("./service-worker.js")
+    .catch(err => console.log("Erro SW:", err));
 }
 
-// ================= LISTENERS FIRESTORE =================
+// ================= LISTENERS FIRESTORE (sem duplicar) =================
 function iniciarListeners() {
   const user = auth.currentUser;
   if (!user) return;
 
-  pararListeners(); // evita duplicar
+  pararListeners(); // garante que não duplica
 
-  // ENTRADAS (filtrado pelo mês)
-  unsubscribeEntradas = entradasRef
-    .where("mesRef", "==", mesSelecionado)
-    .orderBy("criadoEm")
-    .onSnapshot(snapshot => {
-      entradas = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-      atualizarEntradas();
-      atualizarSaldo();
+  unsubscribeEntradas = entradasRef.orderBy("criadoEm").onSnapshot(snapshot => {
+    entradas = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+    atualizarEntradas();
+    atualizarSaldo();
 
-      if (!primeiraCargaEntradas) {
-        snapshot.docChanges().forEach(change => {
-          const d = change.doc.data();
-          if (!podeNotificar()) return;
-          if (!d) return;
+    if (!primeiraCargaEntradas) {
+      snapshot.docChanges().forEach(change => {
+        const d = change.doc.data();
+        if (!d) return;
 
-          if (d.usuario && d.usuario !== auth.currentUser.email) {
-            if (change.type === "added") {
-              notificarUmaVez(
-                `entrada_added_${change.doc.id}`,
-                "💰 Nova entrada",
-                `${d.titulo} - R$ ${Number(d.valor).toFixed(2)}`
-              );
-            }
+        const meuEmail = auth.currentUser?.email;
+        if (!meuEmail) return;
+
+        if (d.usuario && d.usuario !== meuEmail) {
+          if (change.type === "added") {
+            notificarUmaVez(
+              `entrada_added_${change.doc.id}`,
+              "💰 Nova entrada",
+              `${d.titulo} - R$ ${Number(d.valor).toFixed(2)}`
+            );
+          } else if (change.type === "modified") {
+            notificarUmaVez(
+              `entrada_modified_${change.doc.id}_${keyDiaAtual()}`,
+              "✏️ Entrada atualizada",
+              `${d.titulo} - R$ ${Number(d.valor).toFixed(2)}`
+            );
+          } else if (change.type === "removed") {
+            notificarUmaVez(
+              `entrada_removed_${change.doc.id}_${keyDiaAtual()}`,
+              "🗑️ Entrada removida",
+              "Uma entrada foi excluída"
+            );
           }
-        });
-      }
+        }
+      });
+    }
 
-      primeiraCargaEntradas = false;
-    });
+    primeiraCargaEntradas = false;
+  });
 
-  // SAÍDAS (filtrado pelo mês)
-  unsubscribeSaidas = saidasRef
-    .where("mesRef", "==", mesSelecionado)
-    .orderBy("criadoEm")
-    .onSnapshot(snapshot => {
-      saidas = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-      atualizarSaidas();
-      atualizarSaldo();
+  unsubscribeSaidas = saidasRef.orderBy("criadoEm").onSnapshot(snapshot => {
+    saidas = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+    atualizarSaidas();
+    atualizarSaldo();
 
-      if (!primeiraCargaSaidas) {
-        snapshot.docChanges().forEach(change => {
-          const d = change.doc.data();
-          if (!podeNotificar()) return;
-          if (!d) return;
+    if (!primeiraCargaSaidas) {
+      snapshot.docChanges().forEach(change => {
+        const d = change.doc.data();
+        if (!d) return;
 
-          if (d.usuario && d.usuario !== auth.currentUser.email) {
-            if (change.type === "added") {
-              notificarUmaVez(
-                `saida_added_${change.doc.id}`,
-                "💸 Nova saída",
-                `${d.titulo} - R$ ${Number(d.valor).toFixed(2)}`
-              );
-            }
+        const meuEmail = auth.currentUser?.email;
+        if (!meuEmail) return;
+
+        if (d.usuario && d.usuario !== meuEmail) {
+          if (change.type === "added") {
+            notificarUmaVez(
+              `saida_added_${change.doc.id}`,
+              "💸 Nova saída",
+              `${d.titulo} - R$ ${Number(d.valor).toFixed(2)}`
+            );
+          } else if (change.type === "modified") {
+            notificarUmaVez(
+              `saida_modified_${change.doc.id}_${keyDiaAtual()}`,
+              "✏️ Saída atualizada",
+              `${d.titulo} - R$ ${Number(d.valor).toFixed(2)}`
+            );
+          } else if (change.type === "removed") {
+            notificarUmaVez(
+              `saida_removed_${change.doc.id}_${keyDiaAtual()}`,
+              "🗑️ Saída removida",
+              "Uma saída foi excluída"
+            );
           }
-        });
-      }
+        }
+      });
+    }
 
-      primeiraCargaSaidas = false;
-    });
+    primeiraCargaSaidas = false;
+  });
 
-  // VENCIMENTOS (filtrado pelo mês)
-  unsubscribeVencimentos = vencimentosRef
-    .where("mesRef", "==", mesSelecionado)
-    .orderBy("dia")
-    .onSnapshot(snapshot => {
-      vencimentos = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-      atualizarVencimentos();
+  unsubscribeVencimentos = vencimentosRef.orderBy("dia").onSnapshot(snapshot => {
+    vencimentos = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+    atualizarVencimentos();
 
-      primeiraCargaVencimentos = false;
-      verificarVencimentos(false);
-    });
+    if (!primeiraCargaVencimentos) {
+      snapshot.docChanges().forEach(change => {
+        const d = change.doc.data();
+        if (!d) return;
+
+        const meuEmail = auth.currentUser?.email;
+        if (!meuEmail) return;
+
+        if (d.usuario && d.usuario !== meuEmail) {
+          if (change.type === "added") {
+            notificarUmaVez(
+              `venc_added_${change.doc.id}`,
+              "📅 Novo vencimento",
+              `${d.titulo} (dia ${d.dia}) - R$ ${Number(d.valor).toFixed(2)}`
+            );
+          } else if (change.type === "modified") {
+            const status = d.pago ? "Pago ✅" : "Atualizado ✏️";
+            notificarUmaVez(
+              `venc_modified_${change.doc.id}_${keyDiaAtual()}`,
+              `📅 Vencimento ${status}`,
+              `${d.titulo} (dia ${d.dia})`
+            );
+          } else if (change.type === "removed") {
+            notificarUmaVez(
+              `venc_removed_${change.doc.id}_${keyDiaAtual()}`,
+              "🗑️ Vencimento removido",
+              "Um vencimento foi excluído"
+            );
+          }
+        }
+      });
+    }
+
+    primeiraCargaVencimentos = false;
+
+    verificarVencimentos(false);
+  });
 }
 
 function pararListeners() {
@@ -271,7 +377,6 @@ function adicionarEntrada() {
     titulo,
     valor,
     usuario: user.email,
-    mesRef: mesSelecionado,
     criadoEm: firebase.firestore.FieldValue.serverTimestamp()
   });
 }
@@ -289,7 +394,6 @@ function adicionarSaida() {
     titulo,
     valor,
     usuario: user.email,
-    mesRef: mesSelecionado,
     criadoEm: firebase.firestore.FieldValue.serverTimestamp()
   });
 }
@@ -311,8 +415,7 @@ function adicionarVencimento() {
     valor,
     dia,
     pago: false,
-    usuario: user.email,
-    mesRef: mesSelecionado
+    usuario: user.email
   });
 }
 
@@ -451,7 +554,7 @@ function excluirVencimento(id) {
 
 // ================= NOTIFICAÇÃO DE VENCIMENTO (app aberto) =================
 function verificarVencimentos(forcar) {
-  if (!podeNotificar()) return;
+  if (!notificacoesAtivadas()) return;
   if (!Array.isArray(vencimentos) || vencimentos.length === 0) return;
 
   const hoje = new Date().getDate();
