@@ -13,24 +13,15 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-// ================= ESTRUTURA DA CASA =================
-const CASA_ID = "casa_principal";
-const casaRef = db.collection("casas").doc(CASA_ID);
-
-const entradasRef = casaRef.collection("entradas");
-const saidasRef = casaRef.collection("saidas");
-const vencimentosRef = casaRef.collection("vencimentos");
+const entradasRef = db.collection("entradas");
+const saidasRef = db.collection("saidas");
+const vencimentosRef = db.collection("vencimentos");
 
 // ================= ESTADO =================
 let entradas = [];
 let saidas = [];
 let vencimentos = [];
-
-let entradasCarregadas = false;
-let saidasCarregadas = false;
-let vencimentosCarregados = false;
-
-let ignorarPrimeiraCarga = true;
+let primeiraCarga = true;
 
 // ================= LOGIN =================
 function login() {
@@ -48,56 +39,46 @@ auth.onAuthStateChanged(user => {
     document.getElementById("app").style.display = "block";
 
     pedirPermissaoNotificacao();
-    carregarTudo();
+    carregarDados();
 
-    setTimeout(() => ignorarPrimeiraCarga = false, 2000);
-    setInterval(verificarVencimentos, 60000);
+    setTimeout(() => primeiraCarga = false, 2000);
   } else {
     document.getElementById("loginBox").style.display = "block";
     document.getElementById("app").style.display = "none";
   }
 });
 
-// ================= CARREGAR DADOS =================
-function carregarTudo() {
+// ================= DADOS =================
+function carregarDados() {
   entradasRef.orderBy("criadoEm").onSnapshot(snapshot => {
     entradas = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-    entradasCarregadas = true;
     atualizarEntradas();
-    atualizarSaldoSeguro();
-    notificarMudancas(snapshot, "💰 Entrada atualizada");
+    atualizarSaldo();
   });
 
   saidasRef.orderBy("criadoEm").onSnapshot(snapshot => {
     saidas = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-    saidasCarregadas = true;
     atualizarSaidas();
-    atualizarSaldoSeguro();
-    notificarMudancas(snapshot, "💸 Saída atualizada");
+    atualizarSaldo();
   });
 
   vencimentosRef.orderBy("dia").onSnapshot(snapshot => {
     vencimentos = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-    vencimentosCarregados = true;
     atualizarVencimentos();
-    notificarMudancas(snapshot, "📅 Vencimento alterado");
   });
-}
-
-function atualizarSaldoSeguro() {
-  if (!entradasCarregadas || !saidasCarregadas) return;
-  atualizarSaldo();
 }
 
 // ================= ADICIONAR =================
 function adicionarEntrada() {
   const titulo = prompt("Nome da entrada:");
   const valor = parseFloat(prompt("Valor:"));
+
   if (!titulo || isNaN(valor)) return;
 
   entradasRef.add({
     titulo,
     valor,
+    usuario: auth.currentUser.email,
     criadoEm: firebase.firestore.FieldValue.serverTimestamp()
   });
 }
@@ -105,17 +86,19 @@ function adicionarEntrada() {
 function adicionarSaida() {
   const titulo = prompt("Nome da saída:");
   const valor = parseFloat(prompt("Valor:"));
+
   if (!titulo || isNaN(valor)) return;
 
   saidasRef.add({
     titulo,
     valor,
+    usuario: auth.currentUser.email,
     criadoEm: firebase.firestore.FieldValue.serverTimestamp()
   });
 }
 
 function adicionarVencimento() {
-  const titulo = prompt("Nome da conta:");
+  const titulo = prompt("Conta:");
   const valor = parseFloat(prompt("Valor:"));
   const dia = parseInt(prompt("Dia do vencimento (1-31):"));
 
@@ -125,55 +108,74 @@ function adicionarVencimento() {
     titulo,
     valor,
     dia,
-    pago: false
+    pago: false,
+    usuario: auth.currentUser.email
   });
 }
 
 // ================= LISTAS =================
 function atualizarEntradas() {
   const lista = document.getElementById("listaEntradas");
-  const totalSpan = document.getElementById("totalEntradas");
+  const total = document.getElementById("totalEntradas");
   lista.innerHTML = "";
 
-  let total = 0;
+  let soma = 0;
+
   entradas.forEach(e => {
-    total += e.valor;
+    soma += e.valor;
     lista.innerHTML += `
-      <li>${e.titulo} – R$ ${e.valor.toFixed(2)}
-      <button onclick="editarEntrada('${e.id}')">✏️</button>
-      <button onclick="excluirEntrada('${e.id}')">❌</button></li>
+      <li>
+        ${e.titulo} – R$ ${e.valor.toFixed(2)}
+        <span>
+          <button onclick="editarEntrada('${e.id}')">✏️</button>
+          <button onclick="excluirEntrada('${e.id}')">❌</button>
+        </span>
+      </li>
     `;
   });
 
-  totalSpan.textContent = total.toFixed(2);
+  total.textContent = soma.toFixed(2);
 }
 
 function atualizarSaidas() {
   const lista = document.getElementById("listaSaidas");
-  const totalSpan = document.getElementById("totalSaidas");
+  const total = document.getElementById("totalSaidas");
   lista.innerHTML = "";
 
-  let total = 0;
+  let soma = 0;
+
   saidas.forEach(s => {
-    total += s.valor;
+    soma += s.valor;
     lista.innerHTML += `
-      <li>${s.titulo} – R$ ${s.valor.toFixed(2)}
-      <button onclick="editarSaida('${s.id}')">✏️</button>
-      <button onclick="excluirSaida('${s.id}')">❌</button></li>
+      <li>
+        ${s.titulo} – R$ ${s.valor.toFixed(2)}
+        <span>
+          <button onclick="editarSaida('${s.id}')">✏️</button>
+          <button onclick="excluirSaida('${s.id}')">❌</button>
+        </span>
+      </li>
     `;
   });
 
-  totalSpan.textContent = total.toFixed(2);
+  total.textContent = soma.toFixed(2);
 }
 
 function atualizarSaldo() {
-  const entradasTotal = entradas.reduce((s, e) => s + e.valor, 0);
-  const saidasTotal = saidas.reduce((s, e) => s + e.valor, 0);
+  const totalEntradas = entradas.reduce((a, b) => a + b.valor, 0);
+  const totalSaidas = saidas.reduce((a, b) => a + b.valor, 0);
   document.getElementById("saldoFinal").textContent =
-    (entradasTotal - saidasTotal).toFixed(2);
+    (totalEntradas - totalSaidas).toFixed(2);
 }
 
 // ================= EDITAR / EXCLUIR =================
+function excluirEntrada(id) {
+  entradasRef.doc(id).delete();
+}
+
+function excluirSaida(id) {
+  saidasRef.doc(id).delete();
+}
+
 function editarEntrada(id) {
   const e = entradas.find(x => x.id === id);
   const titulo = prompt("Editar nome:", e.titulo);
@@ -190,9 +192,6 @@ function editarSaida(id) {
   saidasRef.doc(id).update({ titulo, valor });
 }
 
-function excluirEntrada(id) { entradasRef.doc(id).delete(); }
-function excluirSaida(id) { saidasRef.doc(id).delete(); }
-
 // ================= VENCIMENTOS =================
 function atualizarVencimentos() {
   const lista = document.getElementById("listaVencimentos");
@@ -201,33 +200,29 @@ function atualizarVencimentos() {
 
   vencimentos.forEach(v => {
     let status = "⏳ A vencer";
-    let cor = "#999";
     let estilo = "";
 
     if (v.pago) {
       status = "✅ Pago";
-      cor = "#4CAF50";
-      estilo = "text-decoration: line-through; opacity:0.7;";
+      estilo = "text-decoration: line-through; opacity:0.6;";
     } else if (v.dia < hoje) {
       status = "❌ Vencido";
-      cor = "#ff4d4d";
-    } else if (v.dia - hoje <= 3) {
-      status = "⚠️ Vence em breve";
-      cor = "#ffcc00";
     }
 
     lista.innerHTML += `
-      <li style="color:${cor};${estilo}">
+      <li style="${estilo}">
         ${v.titulo} – R$ ${v.valor.toFixed(2)} (dia ${v.dia}) ${status}
-        <button onclick="marcarPago('${v.id}', ${!v.pago})">✔️</button>
-        <button onclick="excluirVencimento('${v.id}')">❌</button>
+        <span>
+          <button onclick="marcarPago('${v.id}', ${v.pago})">✔️</button>
+          <button onclick="excluirVencimento('${v.id}')">❌</button>
+        </span>
       </li>
     `;
   });
 }
 
-function marcarPago(id, estado) {
-  vencimentosRef.doc(id).update({ pago: estado });
+function marcarPago(id, pagoAtual) {
+  vencimentosRef.doc(id).update({ pago: !pagoAtual });
 }
 
 function excluirVencimento(id) {
@@ -241,27 +236,36 @@ function pedirPermissaoNotificacao() {
   }
 }
 
-function verificarVencimentos() {
-  const hoje = new Date().getDate();
-
-  vencimentos.forEach(v => {
-    if (!v.pago && v.dia - hoje === 1 && Notification.permission === "granted") {
-      new Notification("📅 Conta vence amanhã", {
-        body: `${v.titulo} - R$ ${v.valor.toFixed(2)}`
-      });
-    }
-  });
-}
-
-function notificarMudancas(snapshot, titulo) {
-  if (ignorarPrimeiraCarga) return;
+// ENTRADAS
+entradasRef.onSnapshot(snapshot => {
+  if (primeiraCarga) return;
 
   snapshot.docChanges().forEach(change => {
-    if (change.type !== "added") return;
-    if (Notification.permission !== "granted") return;
-
-    new Notification(titulo, {
-      body: change.doc.data().titulo
-    });
+    if (change.type === "added") {
+      const d = change.doc.data();
+      if (d.usuario !== auth.currentUser.email &&
+          Notification.permission === "granted") {
+        new Notification("💰 Nova entrada", {
+          body: `${d.titulo} - R$ ${d.valor.toFixed(2)}`
+        });
+      }
+    }
   });
-}
+});
+
+// SAÍDAS
+saidasRef.onSnapshot(snapshot => {
+  if (primeiraCarga) return;
+
+  snapshot.docChanges().forEach(change => {
+    if (change.type === "added") {
+      const d = change.doc.data();
+      if (d.usuario !== auth.currentUser.email &&
+          Notification.permission === "granted") {
+        new Notification("💸 Nova saída", {
+          body: `${d.titulo} - R$ ${d.valor.toFixed(2)}`
+        });
+      }
+    }
+  });
+});
