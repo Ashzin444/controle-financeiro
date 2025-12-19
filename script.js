@@ -32,13 +32,26 @@ let primeiraCargaVencimentos = true;
 
 let vencimentosInterval = null;
 
-// ================= UI HELPERS =================
-function setStatus(msg) {
-  const el = document.getElementById("statusMsg");
-  if (!el) return;
-  el.textContent = msg || "";
+// ================= MÊS =================
+function mesRefAtual() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
+let mesSelecionado = localStorage.getItem("mesRef") || mesRefAtual();
+
+function aplicarMesNoInput() {
+  const el = document.getElementById("mesRef");
+  if (!el) return;
+  el.value = mesSelecionado;
+  el.addEventListener("change", () => {
+    mesSelecionado = el.value || mesRefAtual();
+    localStorage.setItem("mesRef", mesSelecionado);
+    iniciarListeners(); // recarrega snapshots com filtro do mês
+  });
+}
+
+// ================= UI HELPERS =================
 function mostrarApp() {
   document.getElementById("loginBox").style.display = "none";
   document.getElementById("app").style.display = "block";
@@ -59,13 +72,8 @@ function login() {
     return;
   }
 
-  setStatus("Entrando...");
   auth.signInWithEmailAndPassword(email, senha)
-    .then(() => setStatus(""))
-    .catch(err => {
-      setStatus("");
-      alert("Erro: " + err.message);
-    });
+    .catch(err => alert("Erro: " + err.message));
 }
 
 function logout() {
@@ -93,13 +101,18 @@ function marcarNotificado(chave) {
   localStorage.setItem(k, "1");
 }
 
-// Limpa por dia (pra vencimentos não repetirem eternamente)
 function keyDiaAtual() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-// Teste manual
+function notificarUmaVez(chave, titulo, body) {
+  if (!podeNotificar()) return;
+  if (jaNotificado(chave)) return;
+  new Notification(titulo, { body });
+  marcarNotificado(chave);
+}
+
 function testarNotificacao() {
   if (!("Notification" in window)) {
     alert("Seu navegador não suporta notificações.");
@@ -126,21 +139,19 @@ function testarNotificacao() {
 auth.onAuthStateChanged(user => {
   if (user) {
     mostrarApp();
+    aplicarMesNoInput();
     pedirPermissaoNotificacao();
 
-    // reset flags e listeners
     primeiraCargaEntradas = true;
     primeiraCargaSaidas = true;
     primeiraCargaVencimentos = true;
 
     iniciarListeners();
 
-    // checar vencimentos ao entrar + a cada 60s enquanto app aberto
     verificarVencimentos(true);
     if (vencimentosInterval) clearInterval(vencimentosInterval);
     vencimentosInterval = setInterval(() => verificarVencimentos(false), 60000);
 
-    // registrar SW (se já registra em outro lugar, pode remover daqui)
     registrarServiceWorker();
   } else {
     pararListeners();
@@ -154,139 +165,87 @@ auth.onAuthStateChanged(user => {
 // ================= SERVICE WORKER REGISTER =================
 function registrarServiceWorker() {
   if (!("serviceWorker" in navigator)) return;
-
-  navigator.serviceWorker.register("./service-worker.js")
-    .then(() => {
-      // ok
-    })
-    .catch(err => console.log("Erro SW:", err));
+  navigator.serviceWorker.register("./service-worker.js").catch(() => {});
 }
 
-// ================= LISTENERS FIRESTORE (sem duplicar) =================
+// ================= LISTENERS FIRESTORE =================
 function iniciarListeners() {
   const user = auth.currentUser;
   if (!user) return;
 
-  pararListeners(); // garante que não duplica
+  pararListeners(); // evita duplicar
 
-  unsubscribeEntradas = entradasRef.orderBy("criadoEm").onSnapshot(snapshot => {
-    entradas = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-    atualizarEntradas();
-    atualizarSaldo();
+  // ENTRADAS (filtrado pelo mês)
+  unsubscribeEntradas = entradasRef
+    .where("mesRef", "==", mesSelecionado)
+    .orderBy("criadoEm")
+    .onSnapshot(snapshot => {
+      entradas = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      atualizarEntradas();
+      atualizarSaldo();
 
-    // Notificações: mudanças após primeira carga
-    if (!primeiraCargaEntradas) {
-      snapshot.docChanges().forEach(change => {
-        const d = change.doc.data();
-        if (!podeNotificar()) return;
-        if (!d) return;
+      if (!primeiraCargaEntradas) {
+        snapshot.docChanges().forEach(change => {
+          const d = change.doc.data();
+          if (!podeNotificar()) return;
+          if (!d) return;
 
-        // só notificar se foi o OUTRO usuário
-        if (d.usuario && d.usuario !== auth.currentUser.email) {
-          if (change.type === "added") {
-            notificarUmaVez(
-              `entrada_added_${change.doc.id}`,
-              "💰 Nova entrada",
-              `${d.titulo} - R$ ${Number(d.valor).toFixed(2)}`
-            );
-          } else if (change.type === "modified") {
-            notificarUmaVez(
-              `entrada_modified_${change.doc.id}_${keyDiaAtual()}`,
-              "✏️ Entrada atualizada",
-              `${d.titulo} - R$ ${Number(d.valor).toFixed(2)}`
-            );
-          } else if (change.type === "removed") {
-            notificarUmaVez(
-              `entrada_removed_${change.doc.id}_${keyDiaAtual()}`,
-              "🗑️ Entrada removida",
-              `Uma entrada foi excluída`
-            );
+          if (d.usuario && d.usuario !== auth.currentUser.email) {
+            if (change.type === "added") {
+              notificarUmaVez(
+                `entrada_added_${change.doc.id}`,
+                "💰 Nova entrada",
+                `${d.titulo} - R$ ${Number(d.valor).toFixed(2)}`
+              );
+            }
           }
-        }
-      });
-    }
+        });
+      }
 
-    primeiraCargaEntradas = false;
-  });
+      primeiraCargaEntradas = false;
+    });
 
-  unsubscribeSaidas = saidasRef.orderBy("criadoEm").onSnapshot(snapshot => {
-    saidas = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-    atualizarSaidas();
-    atualizarSaldo();
+  // SAÍDAS (filtrado pelo mês)
+  unsubscribeSaidas = saidasRef
+    .where("mesRef", "==", mesSelecionado)
+    .orderBy("criadoEm")
+    .onSnapshot(snapshot => {
+      saidas = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      atualizarSaidas();
+      atualizarSaldo();
 
-    if (!primeiraCargaSaidas) {
-      snapshot.docChanges().forEach(change => {
-        const d = change.doc.data();
-        if (!podeNotificar()) return;
-        if (!d) return;
+      if (!primeiraCargaSaidas) {
+        snapshot.docChanges().forEach(change => {
+          const d = change.doc.data();
+          if (!podeNotificar()) return;
+          if (!d) return;
 
-        if (d.usuario && d.usuario !== auth.currentUser.email) {
-          if (change.type === "added") {
-            notificarUmaVez(
-              `saida_added_${change.doc.id}`,
-              "💸 Nova saída",
-              `${d.titulo} - R$ ${Number(d.valor).toFixed(2)}`
-            );
-          } else if (change.type === "modified") {
-            notificarUmaVez(
-              `saida_modified_${change.doc.id}_${keyDiaAtual()}`,
-              "✏️ Saída atualizada",
-              `${d.titulo} - R$ ${Number(d.valor).toFixed(2)}`
-            );
-          } else if (change.type === "removed") {
-            notificarUmaVez(
-              `saida_removed_${change.doc.id}_${keyDiaAtual()}`,
-              "🗑️ Saída removida",
-              `Uma saída foi excluída`
-            );
+          if (d.usuario && d.usuario !== auth.currentUser.email) {
+            if (change.type === "added") {
+              notificarUmaVez(
+                `saida_added_${change.doc.id}`,
+                "💸 Nova saída",
+                `${d.titulo} - R$ ${Number(d.valor).toFixed(2)}`
+              );
+            }
           }
-        }
-      });
-    }
+        });
+      }
 
-    primeiraCargaSaidas = false;
-  });
+      primeiraCargaSaidas = false;
+    });
 
-  unsubscribeVencimentos = vencimentosRef.orderBy("dia").onSnapshot(snapshot => {
-    vencimentos = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-    atualizarVencimentos();
+  // VENCIMENTOS (filtrado pelo mês)
+  unsubscribeVencimentos = vencimentosRef
+    .where("mesRef", "==", mesSelecionado)
+    .orderBy("dia")
+    .onSnapshot(snapshot => {
+      vencimentos = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      atualizarVencimentos();
 
-    if (!primeiraCargaVencimentos) {
-      snapshot.docChanges().forEach(change => {
-        const d = change.doc.data();
-        if (!podeNotificar()) return;
-        if (!d) return;
-
-        if (d.usuario && d.usuario !== auth.currentUser.email) {
-          if (change.type === "added") {
-            notificarUmaVez(
-              `venc_added_${change.doc.id}`,
-              "📅 Novo vencimento",
-              `${d.titulo} (dia ${d.dia}) - R$ ${Number(d.valor).toFixed(2)}`
-            );
-          } else if (change.type === "modified") {
-            const status = d.pago ? "Pago ✅" : "Atualizado ✏️";
-            notificarUmaVez(
-              `venc_modified_${change.doc.id}_${keyDiaAtual()}`,
-              `📅 Vencimento ${status}`,
-              `${d.titulo} (dia ${d.dia})`
-            );
-          } else if (change.type === "removed") {
-            notificarUmaVez(
-              `venc_removed_${change.doc.id}_${keyDiaAtual()}`,
-              "🗑️ Vencimento removido",
-              `Um vencimento foi excluído`
-            );
-          }
-        }
-      });
-    }
-
-    primeiraCargaVencimentos = false;
-
-    // também checa vencimentos após atualizações (sem spam)
-    verificarVencimentos(false);
-  });
+      primeiraCargaVencimentos = false;
+      verificarVencimentos(false);
+    });
 }
 
 function pararListeners() {
@@ -296,14 +255,6 @@ function pararListeners() {
   unsubscribeEntradas = null;
   unsubscribeSaidas = null;
   unsubscribeVencimentos = null;
-}
-
-function notificarUmaVez(chave, titulo, body) {
-  if (!podeNotificar()) return;
-  if (jaNotificado(chave)) return;
-
-  new Notification(titulo, { body });
-  marcarNotificado(chave);
 }
 
 // ================= ADICIONAR =================
@@ -320,6 +271,7 @@ function adicionarEntrada() {
     titulo,
     valor,
     usuario: user.email,
+    mesRef: mesSelecionado,
     criadoEm: firebase.firestore.FieldValue.serverTimestamp()
   });
 }
@@ -337,6 +289,7 @@ function adicionarSaida() {
     titulo,
     valor,
     usuario: user.email,
+    mesRef: mesSelecionado,
     criadoEm: firebase.firestore.FieldValue.serverTimestamp()
   });
 }
@@ -358,7 +311,8 @@ function adicionarVencimento() {
     valor,
     dia,
     pago: false,
-    usuario: user.email
+    usuario: user.email,
+    mesRef: mesSelecionado
   });
 }
 
@@ -462,18 +416,14 @@ function atualizarVencimentos() {
   vencimentos.forEach(v => {
     let status = "⏳ A vencer";
     let estilo = "";
-    let badge = "";
 
     if (v.pago) {
       status = "✅ Pago";
       estilo = "text-decoration: line-through; opacity:0.65;";
-      badge = "pago";
     } else if (v.dia < hoje) {
       status = "❌ Vencido";
-      badge = "vencido";
     } else if (v.dia - hoje <= 3) {
       status = "⚠️ Vence em breve";
-      badge = "breve";
     }
 
     const li = document.createElement("li");
@@ -510,7 +460,6 @@ function verificarVencimentos(forcar) {
   vencimentos.forEach(v => {
     if (v.pago) return;
 
-    // notificar quando: vence amanhã (dia - hoje === 1) ou vence hoje (dia - hoje === 0)
     const diff = Number(v.dia) - hoje;
     if (diff === 1 || diff === 0) {
       const chave = `venc_alert_${v.id}_${diaKey}_${diff}`;
