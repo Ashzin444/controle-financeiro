@@ -21,88 +21,335 @@ const vencimentosRef = db.collection("vencimentos");
 let entradas = [];
 let saidas = [];
 let vencimentos = [];
-let primeiraCarga = true;
+
+let unsubscribeEntradas = null;
+let unsubscribeSaidas = null;
+let unsubscribeVencimentos = null;
+
+let primeiraCargaEntradas = true;
+let primeiraCargaSaidas = true;
+let primeiraCargaVencimentos = true;
+
+let vencimentosInterval = null;
+
+// ================= UI HELPERS =================
+function setStatus(msg) {
+  const el = document.getElementById("statusMsg");
+  if (!el) return;
+  el.textContent = msg || "";
+}
+
+function mostrarApp() {
+  document.getElementById("loginBox").style.display = "none";
+  document.getElementById("app").style.display = "block";
+}
+
+function mostrarLogin() {
+  document.getElementById("loginBox").style.display = "block";
+  document.getElementById("app").style.display = "none";
+}
 
 // ================= LOGIN =================
 function login() {
-  const email = document.getElementById("email").value;
+  const email = document.getElementById("email").value.trim();
   const senha = document.getElementById("senha").value;
 
+  if (!email || !senha) {
+    alert("Preencha email e senha.");
+    return;
+  }
+
+  setStatus("Entrando...");
   auth.signInWithEmailAndPassword(email, senha)
-    .catch(err => alert("Erro: " + err.message));
+    .then(() => setStatus(""))
+    .catch(err => {
+      setStatus("");
+      alert("Erro: " + err.message);
+    });
+}
+
+function logout() {
+  auth.signOut();
+}
+
+// ================= NOTIFICAÇÕES =================
+function pedirPermissaoNotificacao() {
+  if ("Notification" in window) {
+    Notification.requestPermission();
+  }
+}
+
+function podeNotificar() {
+  return ("Notification" in window) && Notification.permission === "granted";
+}
+
+// Anti-spam: salva chaves notificadas
+function jaNotificado(chave) {
+  const k = "notificado_" + chave;
+  return localStorage.getItem(k) === "1";
+}
+function marcarNotificado(chave) {
+  const k = "notificado_" + chave;
+  localStorage.setItem(k, "1");
+}
+
+// Limpa por dia (pra vencimentos não repetirem eternamente)
+function keyDiaAtual() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+// Teste manual
+function testarNotificacao() {
+  if (!("Notification" in window)) {
+    alert("Seu navegador não suporta notificações.");
+    return;
+  }
+  if (Notification.permission === "granted") {
+    new Notification("✅ Teste de notificação", { body: "Se você viu isso, está funcionando!" });
+    return;
+  }
+  if (Notification.permission !== "denied") {
+    Notification.requestPermission().then(p => {
+      if (p === "granted") {
+        new Notification("✅ Teste de notificação", { body: "Permissão concedida!" });
+      } else {
+        alert("Permissão negada.");
+      }
+    });
+    return;
+  }
+  alert("Notificações bloqueadas. Permita nas configurações do navegador.");
 }
 
 // ================= AUTH =================
 auth.onAuthStateChanged(user => {
   if (user) {
-    document.getElementById("loginBox").style.display = "none";
-    document.getElementById("app").style.display = "block";
-
+    mostrarApp();
     pedirPermissaoNotificacao();
-    carregarDados();
 
-    setTimeout(() => primeiraCarga = false, 2000);
+    // reset flags e listeners
+    primeiraCargaEntradas = true;
+    primeiraCargaSaidas = true;
+    primeiraCargaVencimentos = true;
+
+    iniciarListeners();
+
+    // checar vencimentos ao entrar + a cada 60s enquanto app aberto
+    verificarVencimentos(true);
+    if (vencimentosInterval) clearInterval(vencimentosInterval);
+    vencimentosInterval = setInterval(() => verificarVencimentos(false), 60000);
+
+    // registrar SW (se já registra em outro lugar, pode remover daqui)
+    registrarServiceWorker();
   } else {
-    document.getElementById("loginBox").style.display = "block";
-    document.getElementById("app").style.display = "none";
+    pararListeners();
+    if (vencimentosInterval) clearInterval(vencimentosInterval);
+    vencimentosInterval = null;
+
+    mostrarLogin();
   }
 });
 
-// ================= DADOS =================
-function carregarDados() {
-  entradasRef.orderBy("criadoEm").onSnapshot(snapshot => {
+// ================= SERVICE WORKER REGISTER =================
+function registrarServiceWorker() {
+  if (!("serviceWorker" in navigator)) return;
+
+  navigator.serviceWorker.register("./service-worker.js")
+    .then(() => {
+      // ok
+    })
+    .catch(err => console.log("Erro SW:", err));
+}
+
+// ================= LISTENERS FIRESTORE (sem duplicar) =================
+function iniciarListeners() {
+  const user = auth.currentUser;
+  if (!user) return;
+
+  pararListeners(); // garante que não duplica
+
+  unsubscribeEntradas = entradasRef.orderBy("criadoEm").onSnapshot(snapshot => {
     entradas = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
     atualizarEntradas();
     atualizarSaldo();
+
+    // Notificações: mudanças após primeira carga
+    if (!primeiraCargaEntradas) {
+      snapshot.docChanges().forEach(change => {
+        const d = change.doc.data();
+        if (!podeNotificar()) return;
+        if (!d) return;
+
+        // só notificar se foi o OUTRO usuário
+        if (d.usuario && d.usuario !== auth.currentUser.email) {
+          if (change.type === "added") {
+            notificarUmaVez(
+              `entrada_added_${change.doc.id}`,
+              "💰 Nova entrada",
+              `${d.titulo} - R$ ${Number(d.valor).toFixed(2)}`
+            );
+          } else if (change.type === "modified") {
+            notificarUmaVez(
+              `entrada_modified_${change.doc.id}_${keyDiaAtual()}`,
+              "✏️ Entrada atualizada",
+              `${d.titulo} - R$ ${Number(d.valor).toFixed(2)}`
+            );
+          } else if (change.type === "removed") {
+            notificarUmaVez(
+              `entrada_removed_${change.doc.id}_${keyDiaAtual()}`,
+              "🗑️ Entrada removida",
+              `Uma entrada foi excluída`
+            );
+          }
+        }
+      });
+    }
+
+    primeiraCargaEntradas = false;
   });
 
-  saidasRef.orderBy("criadoEm").onSnapshot(snapshot => {
+  unsubscribeSaidas = saidasRef.orderBy("criadoEm").onSnapshot(snapshot => {
     saidas = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
     atualizarSaidas();
     atualizarSaldo();
+
+    if (!primeiraCargaSaidas) {
+      snapshot.docChanges().forEach(change => {
+        const d = change.doc.data();
+        if (!podeNotificar()) return;
+        if (!d) return;
+
+        if (d.usuario && d.usuario !== auth.currentUser.email) {
+          if (change.type === "added") {
+            notificarUmaVez(
+              `saida_added_${change.doc.id}`,
+              "💸 Nova saída",
+              `${d.titulo} - R$ ${Number(d.valor).toFixed(2)}`
+            );
+          } else if (change.type === "modified") {
+            notificarUmaVez(
+              `saida_modified_${change.doc.id}_${keyDiaAtual()}`,
+              "✏️ Saída atualizada",
+              `${d.titulo} - R$ ${Number(d.valor).toFixed(2)}`
+            );
+          } else if (change.type === "removed") {
+            notificarUmaVez(
+              `saida_removed_${change.doc.id}_${keyDiaAtual()}`,
+              "🗑️ Saída removida",
+              `Uma saída foi excluída`
+            );
+          }
+        }
+      });
+    }
+
+    primeiraCargaSaidas = false;
   });
 
-  vencimentosRef.orderBy("dia").onSnapshot(snapshot => {
+  unsubscribeVencimentos = vencimentosRef.orderBy("dia").onSnapshot(snapshot => {
     vencimentos = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
     atualizarVencimentos();
+
+    if (!primeiraCargaVencimentos) {
+      snapshot.docChanges().forEach(change => {
+        const d = change.doc.data();
+        if (!podeNotificar()) return;
+        if (!d) return;
+
+        if (d.usuario && d.usuario !== auth.currentUser.email) {
+          if (change.type === "added") {
+            notificarUmaVez(
+              `venc_added_${change.doc.id}`,
+              "📅 Novo vencimento",
+              `${d.titulo} (dia ${d.dia}) - R$ ${Number(d.valor).toFixed(2)}`
+            );
+          } else if (change.type === "modified") {
+            const status = d.pago ? "Pago ✅" : "Atualizado ✏️";
+            notificarUmaVez(
+              `venc_modified_${change.doc.id}_${keyDiaAtual()}`,
+              `📅 Vencimento ${status}`,
+              `${d.titulo} (dia ${d.dia})`
+            );
+          } else if (change.type === "removed") {
+            notificarUmaVez(
+              `venc_removed_${change.doc.id}_${keyDiaAtual()}`,
+              "🗑️ Vencimento removido",
+              `Um vencimento foi excluído`
+            );
+          }
+        }
+      });
+    }
+
+    primeiraCargaVencimentos = false;
+
+    // também checa vencimentos após atualizações (sem spam)
+    verificarVencimentos(false);
   });
+}
+
+function pararListeners() {
+  if (unsubscribeEntradas) unsubscribeEntradas();
+  if (unsubscribeSaidas) unsubscribeSaidas();
+  if (unsubscribeVencimentos) unsubscribeVencimentos();
+  unsubscribeEntradas = null;
+  unsubscribeSaidas = null;
+  unsubscribeVencimentos = null;
+}
+
+function notificarUmaVez(chave, titulo, body) {
+  if (!podeNotificar()) return;
+  if (jaNotificado(chave)) return;
+
+  new Notification(titulo, { body });
+  marcarNotificado(chave);
 }
 
 // ================= ADICIONAR =================
 function adicionarEntrada() {
-  const titulo = prompt("Nome da entrada:");
-  const valor = parseFloat(prompt("Valor:"));
+  const user = auth.currentUser;
+  if (!user) return alert("Faça login.");
 
-  if (!titulo || isNaN(valor)) return alert("Dados inválidos");
+  const titulo = prompt("Nome da entrada:");
+  const valor = Number.parseFloat(prompt("Valor:"));
+
+  if (!titulo || Number.isNaN(valor)) return alert("Dados inválidos");
 
   entradasRef.add({
     titulo,
     valor,
-    usuario: auth.currentUser.email,
+    usuario: user.email,
     criadoEm: firebase.firestore.FieldValue.serverTimestamp()
   });
 }
 
 function adicionarSaida() {
-  const titulo = prompt("Nome da saída:");
-  const valor = parseFloat(prompt("Valor:"));
+  const user = auth.currentUser;
+  if (!user) return alert("Faça login.");
 
-  if (!titulo || isNaN(valor)) return alert("Dados inválidos");
+  const titulo = prompt("Nome da saída:");
+  const valor = Number.parseFloat(prompt("Valor:"));
+
+  if (!titulo || Number.isNaN(valor)) return alert("Dados inválidos");
 
   saidasRef.add({
     titulo,
     valor,
-    usuario: auth.currentUser.email,
+    usuario: user.email,
     criadoEm: firebase.firestore.FieldValue.serverTimestamp()
   });
 }
 
 function adicionarVencimento() {
-  const titulo = prompt("Conta:");
-  const valor = parseFloat(prompt("Valor:"));
-  const dia = parseInt(prompt("Dia do vencimento (1-31):"));
+  const user = auth.currentUser;
+  if (!user) return alert("Faça login.");
 
-  if (!titulo || isNaN(valor) || isNaN(dia) || dia < 1 || dia > 31) {
+  const titulo = prompt("Conta:");
+  const valor = Number.parseFloat(prompt("Valor:"));
+  const dia = Number.parseInt(prompt("Dia do vencimento (1-31):"), 10);
+
+  if (!titulo || Number.isNaN(valor) || Number.isNaN(dia) || dia < 1 || dia > 31) {
     return alert("Dados inválidos");
   }
 
@@ -111,7 +358,7 @@ function adicionarVencimento() {
     valor,
     dia,
     pago: false,
-    usuario: auth.currentUser.email
+    usuario: user.email
   });
 }
 
@@ -124,16 +371,17 @@ function atualizarEntradas() {
   let soma = 0;
 
   entradas.forEach(e => {
-    soma += e.valor;
-    lista.innerHTML += `
-      <li>
-        ${e.titulo} – R$ ${e.valor.toFixed(2)}
-        <span>
-          <button onclick="editarEntrada('${e.id}')">✏️</button>
-          <button onclick="excluirEntrada('${e.id}')">❌</button>
-        </span>
-      </li>
+    soma += Number(e.valor) || 0;
+
+    const li = document.createElement("li");
+    li.innerHTML = `
+      <span class="itemTexto">${e.titulo} – R$ ${Number(e.valor).toFixed(2)}</span>
+      <span class="itemAcoes">
+        <button onclick="editarEntrada('${e.id}')">✏️</button>
+        <button onclick="excluirEntrada('${e.id}')">❌</button>
+      </span>
     `;
+    lista.appendChild(li);
   });
 
   total.textContent = soma.toFixed(2);
@@ -147,24 +395,26 @@ function atualizarSaidas() {
   let soma = 0;
 
   saidas.forEach(s => {
-    soma += s.valor;
-    lista.innerHTML += `
-      <li>
-        ${s.titulo} – R$ ${s.valor.toFixed(2)}
-        <span>
-          <button onclick="editarSaida('${s.id}')">✏️</button>
-          <button onclick="excluirSaida('${s.id}')">❌</button>
-        </span>
-      </li>
+    soma += Number(s.valor) || 0;
+
+    const li = document.createElement("li");
+    li.innerHTML = `
+      <span class="itemTexto">${s.titulo} – R$ ${Number(s.valor).toFixed(2)}</span>
+      <span class="itemAcoes">
+        <button onclick="editarSaida('${s.id}')">✏️</button>
+        <button onclick="excluirSaida('${s.id}')">❌</button>
+      </span>
     `;
+    lista.appendChild(li);
   });
 
   total.textContent = soma.toFixed(2);
 }
 
 function atualizarSaldo() {
-  const totalEntradas = entradas.reduce((a, b) => a + b.valor, 0);
-  const totalSaidas = saidas.reduce((a, b) => a + b.valor, 0);
+  const totalEntradas = entradas.reduce((acc, cur) => acc + (Number(cur.valor) || 0), 0);
+  const totalSaidas = saidas.reduce((acc, cur) => acc + (Number(cur.valor) || 0), 0);
+
   document.getElementById("saldoFinal").textContent =
     (totalEntradas - totalSaidas).toFixed(2);
 }
@@ -180,17 +430,25 @@ function excluirSaida(id) {
 
 function editarEntrada(id) {
   const e = entradas.find(x => x.id === id);
+  if (!e) return;
+
   const titulo = prompt("Editar nome:", e.titulo);
-  const valor = parseFloat(prompt("Editar valor:", e.valor));
-  if (!titulo || isNaN(valor)) return;
+  const valor = Number.parseFloat(prompt("Editar valor:", e.valor));
+
+  if (!titulo || Number.isNaN(valor)) return;
+
   entradasRef.doc(id).update({ titulo, valor });
 }
 
 function editarSaida(id) {
   const s = saidas.find(x => x.id === id);
+  if (!s) return;
+
   const titulo = prompt("Editar nome:", s.titulo);
-  const valor = parseFloat(prompt("Editar valor:", s.valor));
-  if (!titulo || isNaN(valor)) return;
+  const valor = Number.parseFloat(prompt("Editar valor:", s.valor));
+
+  if (!titulo || Number.isNaN(valor)) return;
+
   saidasRef.doc(id).update({ titulo, valor });
 }
 
@@ -198,30 +456,38 @@ function editarSaida(id) {
 function atualizarVencimentos() {
   const lista = document.getElementById("listaVencimentos");
   lista.innerHTML = "";
+
   const hoje = new Date().getDate();
 
   vencimentos.forEach(v => {
     let status = "⏳ A vencer";
     let estilo = "";
+    let badge = "";
 
     if (v.pago) {
       status = "✅ Pago";
-      estilo = "text-decoration: line-through; opacity:0.6;";
+      estilo = "text-decoration: line-through; opacity:0.65;";
+      badge = "pago";
     } else if (v.dia < hoje) {
       status = "❌ Vencido";
+      badge = "vencido";
     } else if (v.dia - hoje <= 3) {
       status = "⚠️ Vence em breve";
+      badge = "breve";
     }
 
-    lista.innerHTML += `
-      <li style="${estilo}">
-        ${v.titulo} – R$ ${v.valor.toFixed(2)} (dia ${v.dia}) ${status}
-        <span>
-          <button onclick="marcarPago('${v.id}', ${v.pago})">✔️</button>
-          <button onclick="excluirVencimento('${v.id}')">❌</button>
-        </span>
-      </li>
+    const li = document.createElement("li");
+    li.setAttribute("style", estilo);
+    li.innerHTML = `
+      <span class="itemTexto">
+        ${v.titulo} – R$ ${Number(v.valor).toFixed(2)} (dia ${v.dia}) ${status}
+      </span>
+      <span class="itemAcoes">
+        <button onclick="marcarPago('${v.id}', ${!!v.pago})">✔️</button>
+        <button onclick="excluirVencimento('${v.id}')">❌</button>
+      </span>
     `;
+    lista.appendChild(li);
   });
 }
 
@@ -233,43 +499,28 @@ function excluirVencimento(id) {
   vencimentosRef.doc(id).delete();
 }
 
-// ================= NOTIFICAÇÕES =================
-function pedirPermissaoNotificacao() {
-  if ("Notification" in window) {
-    Notification.requestPermission();
-  }
+// ================= NOTIFICAÇÃO DE VENCIMENTO (app aberto) =================
+function verificarVencimentos(forcar) {
+  if (!podeNotificar()) return;
+  if (!Array.isArray(vencimentos) || vencimentos.length === 0) return;
+
+  const hoje = new Date().getDate();
+  const diaKey = keyDiaAtual();
+
+  vencimentos.forEach(v => {
+    if (v.pago) return;
+
+    // notificar quando: vence amanhã (dia - hoje === 1) ou vence hoje (dia - hoje === 0)
+    const diff = Number(v.dia) - hoje;
+    if (diff === 1 || diff === 0) {
+      const chave = `venc_alert_${v.id}_${diaKey}_${diff}`;
+      if (!forcar && jaNotificado(chave)) return;
+
+      const titulo = diff === 0 ? "📅 Vence HOJE" : "📅 Vence amanhã";
+      const body = `${v.titulo} - R$ ${Number(v.valor).toFixed(2)} (dia ${v.dia})`;
+
+      new Notification(titulo, { body });
+      marcarNotificado(chave);
+    }
+  });
 }
-
-// NOTIFICAÇÕES DE ENTRADAS
-entradasRef.onSnapshot(snapshot => {
-  if (primeiraCarga) return;
-
-  snapshot.docChanges().forEach(change => {
-    if (change.type === "added") {
-      const d = change.doc.data();
-      if (d.usuario !== auth.currentUser.email &&
-          Notification.permission === "granted") {
-        new Notification("💰 Nova entrada", {
-          body: `${d.titulo} - R$ ${d.valor.toFixed(2)}`
-        });
-      }
-    }
-  });
-});
-
-// NOTIFICAÇÕES DE SAÍDAS
-saidasRef.onSnapshot(snapshot => {
-  if (primeiraCarga) return;
-
-  snapshot.docChanges().forEach(change => {
-    if (change.type === "added") {
-      const d = change.doc.data();
-      if (d.usuario !== auth.currentUser.email &&
-          Notification.permission === "granted") {
-        new Notification("💸 Nova saída", {
-          body: `${d.titulo} - R$ ${d.valor.toFixed(2)}`
-        });
-      }
-    }
-  });
-});

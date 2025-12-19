@@ -54,6 +54,13 @@ body {
   border-radius: 8px;
   border: 1px solid #ccc;
   font-size: 16px;
+  outline: none;
+  transition: 0.2s;
+}
+
+#loginBox input:focus {
+  border-color: var(--cor-primaria);
+  box-shadow: 0 0 0 3px rgba(102,126,234,0.25);
 }
 
 #loginBox button {
@@ -69,11 +76,28 @@ body {
   margin: auto;
 }
 
+/* Barra topo (título + sair) */
+.topBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.btnSecundario {
+  background: rgba(255,255,255,0.2);
+  border: 1px solid rgba(255,255,255,0.35);
+}
+.btnSecundario:hover {
+  background: rgba(255,255,255,0.3);
+}
+
 /* TÍTULO */
 h1 {
   text-align: center;
   color: var(--cor-texto-claro);
-  margin-bottom: 20px;
+  margin: 0;
 }
 
 h1::after {
@@ -107,6 +131,7 @@ section h2::after {
 ul {
   list-style: none;
   padding: 0;
+  margin: 0;
 }
 
 li {
@@ -117,6 +142,18 @@ li {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.itemTexto {
+  flex: 1;
+  min-width: 180px;
+}
+
+.itemAcoes {
+  display: flex;
+  gap: 6px;
 }
 
 /* =========================
@@ -144,6 +181,7 @@ button:active {
 
 li button {
   font-size: 14px;
+  margin-left: 0;
 }
 
 /* =========================
@@ -165,6 +203,12 @@ strong {
   font-size: 18px;
 }
 
+.acoesResumo {
+  margin-top: 10px;
+  display: flex;
+  justify-content: flex-end;
+}
+
 /* =========================
    ANIMAÇÃO
 ========================= */
@@ -183,9 +227,22 @@ strong {
    RESPONSIVO
 ========================= */
 @media (max-width: 600px) {
+  .topBar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
   li {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: stretch;
+  }
+
+  .itemTexto {
+    min-width: 100%;
+  }
+
+  .itemAcoes {
+    width: 100%;
   }
 
   li button {
