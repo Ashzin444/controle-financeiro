@@ -73,7 +73,7 @@ function adicionarEntrada() {
   const titulo = prompt("Nome da entrada:");
   const valor = parseFloat(prompt("Valor:"));
 
-  if (!titulo || isNaN(valor)) return;
+  if (!titulo || isNaN(valor)) return alert("Dados inválidos");
 
   entradasRef.add({
     titulo,
@@ -87,7 +87,7 @@ function adicionarSaida() {
   const titulo = prompt("Nome da saída:");
   const valor = parseFloat(prompt("Valor:"));
 
-  if (!titulo || isNaN(valor)) return;
+  if (!titulo || isNaN(valor)) return alert("Dados inválidos");
 
   saidasRef.add({
     titulo,
@@ -102,7 +102,9 @@ function adicionarVencimento() {
   const valor = parseFloat(prompt("Valor:"));
   const dia = parseInt(prompt("Dia do vencimento (1-31):"));
 
-  if (!titulo || isNaN(valor) || isNaN(dia)) return;
+  if (!titulo || isNaN(valor) || isNaN(dia) || dia < 1 || dia > 31) {
+    return alert("Dados inválidos");
+  }
 
   vencimentosRef.add({
     titulo,
@@ -207,6 +209,8 @@ function atualizarVencimentos() {
       estilo = "text-decoration: line-through; opacity:0.6;";
     } else if (v.dia < hoje) {
       status = "❌ Vencido";
+    } else if (v.dia - hoje <= 3) {
+      status = "⚠️ Vence em breve";
     }
 
     lista.innerHTML += `
@@ -236,7 +240,7 @@ function pedirPermissaoNotificacao() {
   }
 }
 
-// ENTRADAS
+// NOTIFICAÇÕES DE ENTRADAS
 entradasRef.onSnapshot(snapshot => {
   if (primeiraCarga) return;
 
@@ -253,7 +257,7 @@ entradasRef.onSnapshot(snapshot => {
   });
 });
 
-// SAÍDAS
+// NOTIFICAÇÕES DE SAÍDAS
 saidasRef.onSnapshot(snapshot => {
   if (primeiraCarga) return;
 
