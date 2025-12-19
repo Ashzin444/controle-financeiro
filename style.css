@@ -3,6 +3,7 @@
   font-family: "Segoe UI", Arial, sans-serif;
 }
 
+/* BODY */
 body {
   margin: 0;
   padding: 0;
@@ -21,6 +22,7 @@ body {
   border-radius: 12px;
   box-shadow: 0 10px 30px rgba(0,0,0,0.2);
   text-align: center;
+  animation: fadeUp 0.4s ease;
 }
 
 #loginBox h2 {
@@ -47,10 +49,6 @@ body {
   cursor: pointer;
 }
 
-#loginBox button:hover {
-  background: #556cd6;
-}
-
 /* APP */
 #app {
   padding: 20px;
@@ -58,19 +56,21 @@ body {
   margin: auto;
 }
 
+/* TITULO */
 h1 {
   text-align: center;
   color: white;
   margin-bottom: 20px;
 }
 
-/* CARD */
+/* CARDS */
 section {
   background: white;
   border-radius: 12px;
   padding: 15px;
   margin-bottom: 20px;
   box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+  animation: fadeUp 0.4s ease;
 }
 
 section h2 {
@@ -98,17 +98,23 @@ button {
   background: #667eea;
   color: white;
   border: none;
-  padding: 8px 12px;
+  padding: 10px 14px;
   border-radius: 6px;
   cursor: pointer;
   margin-left: 5px;
+  min-height: 44px;
+  transition: 0.2s;
 }
 
 button:hover {
   background: #556cd6;
 }
 
-/* BOTÕES DE AÇÃO */
+button:active {
+  transform: scale(0.97);
+}
+
+/* BOTÕES NAS LISTAS */
 li button {
   font-size: 14px;
 }
@@ -116,10 +122,30 @@ li button {
 /* RESUMO */
 section p {
   font-size: 16px;
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px dashed #ddd;
+}
+
+section p:last-child {
+  border-bottom: none;
 }
 
 strong {
   font-size: 18px;
+}
+
+/* ANIMAÇÃO */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* RESPONSIVO */
@@ -130,6 +156,36 @@ strong {
   }
 
   li button {
+    width: 100%;
     margin-top: 5px;
+  }
+}
+
+/* TELAS MUITO PEQUENAS */
+@media (max-width: 360px) {
+  h1 {
+    font-size: 22px;
+  }
+
+  button {
+    font-size: 14px;
+  }
+}
+
+/* MODO ESCURO AUTOMÁTICO */
+@media (prefers-color-scheme: dark) {
+  body {
+    background: linear-gradient(135deg, #1e1e2f, #2b2b45);
+    color: #eee;
+  }
+
+  section,
+  #loginBox {
+    background: #2a2a3d;
+    color: #eee;
+  }
+
+  li {
+    background: #3a3a55;
   }
 }
