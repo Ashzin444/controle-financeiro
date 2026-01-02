@@ -51,9 +51,7 @@ hr {
   animation: fadeUp 0.4s ease;
 }
 
-#loginBox h2 {
-  margin-bottom: 20px;
-}
+#loginBox h2 { margin-bottom: 20px; }
 
 #loginBox input {
   width: 100%;
@@ -71,9 +69,7 @@ hr {
   box-shadow: 0 0 0 3px rgba(102,126,234,0.25);
 }
 
-#loginBox button {
-  width: 100%;
-}
+#loginBox button { width: 100%; }
 
 /* =========================
    APP
@@ -84,7 +80,7 @@ hr {
   margin: auto;
 }
 
-/* Barra topo (título + ações) */
+/* Barra topo */
 .topBar {
   display: flex;
   align-items: center;
@@ -93,7 +89,6 @@ hr {
   margin-bottom: 10px;
 }
 
-/* NOVO: ações da topBar (Home/Sair) */
 .topBarAcoes {
   display: flex;
   gap: 8px;
@@ -105,9 +100,7 @@ hr {
   background: rgba(255,255,255,0.2);
   border: 1px solid rgba(255,255,255,0.35);
 }
-.btnSecundario:hover {
-  background: rgba(255,255,255,0.3);
-}
+.btnSecundario:hover { background: rgba(255,255,255,0.3); }
 
 /* TÍTULO */
 h1 {
@@ -115,24 +108,13 @@ h1 {
   color: var(--cor-texto-claro);
   margin: 0;
 }
+h1::after { content: " 💜"; }
 
-h1::after {
-  content: " 💜";
-}
+/* TELAS */
+.tela { display: block; }
 
-/* =========================
-   TELAS (NAVEGAÇÃO)
-========================= */
-.tela {
-  display: block;
-}
-
-/* =========================
-   HOME / MENU
-========================= */
-.cardHero {
-  border: 1px solid rgba(0,0,0,0.06);
-}
+/* HOME */
+.cardHero { border: 1px solid rgba(0,0,0,0.06); }
 
 .gridMenu {
   display: grid;
@@ -169,21 +151,10 @@ h1::after {
   background: rgba(102,126,234,0.14);
 }
 
-.btnMenuTexto strong {
-  display: block;
-  font-size: 15px;
-}
+.btnMenuTexto strong { display: block; font-size: 15px; }
+.btnMenuTexto span { display: block; font-size: 13px; opacity: .75; margin-top: 3px; }
 
-.btnMenuTexto span {
-  display: block;
-  font-size: 13px;
-  opacity: .75;
-  margin-top: 3px;
-}
-
-/* =========================
-   CARDS
-========================= */
+/* CARDS */
 section {
   background: var(--cor-fundo-card);
   border-radius: 12px;
@@ -192,19 +163,10 @@ section {
   box-shadow: 0 5px 15px rgba(0,0,0,0.1);
   animation: fadeUp 0.4s ease;
 }
+section h2 { margin-top: 0; }
+section h2::after { content: " ✨"; color: var(--cor-destaque); }
 
-section h2 {
-  margin-top: 0;
-}
-
-section h2::after {
-  content: " ✨";
-  color: var(--cor-destaque);
-}
-
-/* =========================
-   INPUT DO MÊS
-========================= */
+/* INPUT MÊS */
 #mesRef {
   width: 100%;
   max-width: 260px;
@@ -216,21 +178,13 @@ section h2::after {
   outline: none;
   transition: 0.2s;
 }
-
 #mesRef:focus {
   border-color: var(--cor-primaria);
   box-shadow: 0 0 0 3px rgba(102,126,234,0.22);
 }
 
-/* =========================
-   LISTAS
-========================= */
-ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
+/* LISTAS */
+ul { list-style: none; padding: 0; margin: 0; }
 li {
   background: var(--cor-fundo-item);
   margin-bottom: 10px;
@@ -242,20 +196,10 @@ li {
   gap: 10px;
   flex-wrap: wrap;
 }
+.itemTexto { flex: 1; min-width: 180px; }
+.itemAcoes { display: flex; gap: 6px; }
 
-.itemTexto {
-  flex: 1;
-  min-width: 180px;
-}
-
-.itemAcoes {
-  display: flex;
-  gap: 6px;
-}
-
-/* =========================
-   BOTÕES
-========================= */
+/* BOTÕES */
 button {
   background: var(--cor-primaria);
   color: var(--cor-texto-claro);
@@ -267,28 +211,12 @@ button {
   min-height: 44px;
   transition: 0.2s;
 }
+button:hover { background: var(--cor-secundaria); }
+button:active { transform: scale(0.97); }
+button:focus-visible { outline: 3px solid rgba(102,126,234,0.35); outline-offset: 2px; }
+li button { font-size: 14px; margin-left: 0; }
 
-button:hover {
-  background: var(--cor-secundaria);
-}
-
-button:active {
-  transform: scale(0.97);
-}
-
-button:focus-visible {
-  outline: 3px solid rgba(102,126,234,0.35);
-  outline-offset: 2px;
-}
-
-li button {
-  font-size: 14px;
-  margin-left: 0;
-}
-
-/* =========================
-   RESUMO
-========================= */
+/* RESUMO */
 section p {
   font-size: 16px;
   display: flex;
@@ -296,14 +224,8 @@ section p {
   padding: 6px 0;
   border-bottom: 1px dashed #ddd;
 }
-
-section p:last-child {
-  border-bottom: none;
-}
-
-strong {
-  font-size: 18px;
-}
+section p:last-child { border-bottom: none; }
+strong { font-size: 18px; }
 
 .acoesResumo {
   margin-top: 10px;
@@ -313,300 +235,46 @@ strong {
   flex-wrap: wrap;
 }
 
-/* =========================
-   BOTÃO VOLTAR (FINANCEIRO)
-========================= */
+/* VOLTAR */
 .cardVoltar {
   background: transparent;
   box-shadow: none;
   padding: 0;
   margin-bottom: 10px;
 }
-
 .btnVoltar {
   width: 100%;
   background: rgba(255,255,255,0.22);
   border: 1px solid rgba(255,255,255,0.35);
 }
+.btnVoltar:hover { background: rgba(255,255,255,0.32); }
 
-.btnVoltar:hover {
-  background: rgba(255,255,255,0.32);
-}
-
-/* =========================
-   JOGO DA VELHA (TIC TAC TOE)
-========================= */
-.tttSala {
-  display: grid;
-  gap: 10px;
-}
-
-#tttRoomId {
-  width: 100%;
-  padding: 12px;
-  border-radius: 10px;
-  border: 1px solid #cfcfe6;
-  background: #fff;
-  font-size: 16px;
-  outline: none;
-  transition: 0.2s;
-}
-
-#tttRoomId:focus {
-  border-color: var(--cor-primaria);
-  box-shadow: 0 0 0 3px rgba(102,126,234,0.22);
-}
-
-.tttBotoes {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.tttBotoes button {
-  margin-left: 0;
-}
-
-.tttInfos {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  margin-bottom: 12px;
-}
-
-.tttBadge {
-  padding: 8px 10px;
-  border-radius: 999px;
-  background: rgba(102,126,234,0.12);
-  border: 1px solid rgba(0,0,0,0.06);
-  font-size: 14px;
-  white-space: nowrap;
-}
-
-.tttTabuleiro {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-  max-width: 420px;
-  margin: 0 auto;
-}
-
-.tttCasa {
-  margin-left: 0;
-  min-height: 90px;
-  border-radius: 16px;
-  background: var(--cor-fundo-item);
-  color: var(--cor-texto);
-  border: 1px solid rgba(0,0,0,0.06);
-  font-size: 40px;
-  font-weight: 700;
-  display: grid;
-  place-items: center;
-  user-select: none;
-}
-
-.tttCasa:hover {
-  filter: brightness(0.99);
-}
-
-.tttCasa:disabled {
-  opacity: 0.65;
-  cursor: not-allowed;
-  transform: none;
-}
-
-.tttAcoes {
-  margin-top: 14px;
-  display: flex;
-  gap: 10px;
-  justify-content: center;
-  flex-wrap: wrap;
-}
-
-.tttAcoes button {
-  margin-left: 0;
-}
-
-/* =========================
-   BÍBLIA (CHECKLIST - EU / ELA)
-========================= */
-.bibleTopo {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.bibleData {
-  font-size: 14px;
-  opacity: .8;
-}
-
-.verseCard {
-  background: var(--cor-fundo-item);
-  border: 1px solid rgba(0,0,0,0.06);
-  border-radius: 14px;
-  padding: 12px;
-}
-
-.verseRef {
-  font-weight: 700;
-  margin-bottom: 6px;
-}
-
-.verseText {
-  margin: 0;
-  line-height: 1.5;
-  opacity: .95;
-}
-
-.bibleGrid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-  margin-top: 12px;
-}
-
-.bibleUserCard {
-  background: var(--cor-fundo-item);
-  border: 1px solid rgba(0,0,0,0.06);
-  border-radius: 14px;
-  padding: 12px;
-  display: grid;
-  gap: 10px;
-}
-
-.bibleUserHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 10px;
-}
-
-.bibleUserHeader strong {
-  font-size: 16px;
-}
-
-.badgeStatus {
-  padding: 6px 10px;
-  border-radius: 999px;
-  font-size: 13px;
-  border: 1px solid rgba(0,0,0,0.06);
-  background: rgba(102,126,234,0.10);
-  white-space: nowrap;
-}
-
-.badgeOk {
-  background: rgba(46, 204, 113, 0.14);
-}
-
-.badgePendente {
-  background: rgba(255, 193, 7, 0.16);
-}
-
-.btnCheck {
-  width: 100%;
-  margin-left: 0;
-}
-
-.bibleHint {
-  margin: 0;
-  font-size: 13px;
-  opacity: .8;
-}
-
-/* =========================
-   ANIMAÇÃO
-========================= */
+/* ANIMAÇÃO */
 @keyframes fadeUp {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-/* =========================
-   RESPONSIVO
-========================= */
+/* RESPONSIVO */
 @media (max-width: 900px) {
-  .gridMenu {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+  .gridMenu { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
-
 @media (max-width: 600px) {
-  .topBar {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .topBarAcoes {
-    justify-content: space-between;
-  }
-
-  #mesRef {
-    max-width: 100%;
-  }
-
-  .gridMenu {
-    grid-template-columns: 1fr;
-  }
-
-  li {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .itemTexto {
-    min-width: 100%;
-  }
-
-  .itemAcoes {
-    width: 100%;
-  }
-
-  li button {
-    width: 100%;
-    margin-top: 5px;
-  }
-
-  .tttTabuleiro {
-    max-width: 100%;
-  }
-
-  .tttCasa {
-    min-height: 86px;
-    font-size: 38px;
-  }
-
-  .bibleGrid {
-    grid-template-columns: 1fr;
-  }
+  .topBar { flex-direction: column; align-items: stretch; }
+  .topBarAcoes { justify-content: space-between; }
+  #mesRef { max-width: 100%; }
+  .gridMenu { grid-template-columns: 1fr; }
+  li { flex-direction: column; align-items: stretch; }
+  .itemTexto { min-width: 100%; }
+  .itemAcoes { width: 100%; }
+  li button { width: 100%; margin-top: 5px; }
 }
-
 @media (max-width: 360px) {
-  h1 {
-    font-size: 22px;
-  }
-
-  button {
-    font-size: 14px;
-  }
-
-  .tttCasa {
-    min-height: 78px;
-    font-size: 34px;
-  }
+  h1 { font-size: 22px; }
+  button { font-size: 14px; }
 }
 
-/* =========================
-   MODO ESCURO AUTOMÁTICO
-========================= */
+/* DARK MODE */
 @media (prefers-color-scheme: dark) {
   :root {
     --cor-fundo-card: #2a2a3d;
@@ -618,45 +286,327 @@ strong {
     background: linear-gradient(135deg, #1e1e2f, #2b2b45);
   }
 
-  #mesRef,
-  #tttRoomId {
-    background: #2a2a3d;
-    color: #eee;
-    border-color: rgba(255,255,255,0.18);
-  }
+  #mesRef { background: #2a2a3d; color: #eee; border-color: rgba(255,255,255,0.18); }
+  hr { background: rgba(255,255,255,0.18); }
 
-  hr {
-    background: rgba(255,255,255,0.18);
-  }
+  .btnMenu { border-color: rgba(255,255,255,0.10); }
+  .btnMenuIcon { background: rgba(102,126,234,0.20); }
 
-  /* ajustes do menu no dark */
-  .btnMenu {
+  .btnVoltar { border-color: rgba(255,255,255,0.22); }
+}
+
+/* =========================================================
+   ✅ CONCEITO 1: "PÁGINA DE BÍBLIA"
+========================================================= */
+
+.bibleBookStage { position: relative; padding: 10px 0 30px 0; }
+
+.bibleAmbientGlow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(700px 280px at 20% 0%, rgba(255,255,255,0.25), transparent 60%),
+    radial-gradient(700px 280px at 80% 10%, rgba(255,255,255,0.18), transparent 60%);
+  filter: blur(2px);
+  opacity: .9;
+}
+
+.biblePaper {
+  position: relative;
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 18px 18px 16px 18px;
+
+  border-radius: 18px;
+  border: 1px solid rgba(0,0,0,0.08);
+  box-shadow:
+    0 18px 60px rgba(0,0,0,0.22),
+    0 6px 18px rgba(0,0,0,0.12);
+
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.92), rgba(255,255,255,0.88)),
+    radial-gradient(900px 420px at 10% 5%, rgba(255,255,255,0.55), transparent 55%),
+    radial-gradient(900px 420px at 90% 10%, rgba(255,255,255,0.35), transparent 60%);
+
+  overflow: hidden;
+  isolation: isolate;
+  transform-style: preserve-3d;
+}
+
+.biblePaper::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: .12;
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      rgba(0,0,0,0.06),
+      rgba(0,0,0,0.06) 1px,
+      transparent 1px,
+      transparent 26px
+    );
+}
+
+.biblePaper::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: .10;
+  background:
+    radial-gradient(500px 200px at 10% 10%, rgba(0,0,0,0.10), transparent 60%),
+    radial-gradient(500px 200px at 90% 20%, rgba(0,0,0,0.08), transparent 60%);
+}
+
+/* ✅ marcador com cor do casal */
+.bibleBookmark {
+  position: absolute;
+  top: -2px;
+  right: 22px;
+  width: 30px;
+  height: 86px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.35), rgba(255,255,255,0.0)),
+              linear-gradient(180deg, var(--cor-destaque), rgba(255,111,167,0.75));
+  border-radius: 0 0 10px 10px;
+  box-shadow: 0 10px 18px rgba(0,0,0,0.18);
+  z-index: 3;
+}
+
+.bibleBookmark::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -14px;
+  margin: auto;
+  width: 0;
+  height: 0;
+  border-left: 15px solid transparent;
+  border-right: 15px solid transparent;
+  border-top: 14px solid rgba(255,111,167,0.75);
+}
+
+/* ✅ selo dourado */
+.bibleGoldSeal {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  z-index: 4;
+  padding: 8px 10px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 900;
+  letter-spacing: .2px;
+  color: #3b2b00;
+  border: 1px solid rgba(0,0,0,0.10);
+  background:
+    radial-gradient(120px 40px at 30% 30%, rgba(255,255,255,0.55), transparent 60%),
+    linear-gradient(135deg, #f7d776, #e7b84e, #f7d776);
+  box-shadow: 0 12px 26px rgba(0,0,0,0.18);
+}
+
+.bibleHeader {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.bibleDayPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 999px;
+  background: rgba(102,126,234,0.12);
+  border: 1px solid rgba(0,0,0,0.08);
+}
+
+.bibleDayPill strong { font-size: 16px; }
+.bibleDayIcon { font-size: 18px; }
+.bibleHeaderRight { opacity: .75; font-size: 13px; }
+
+.bibleTitleArea { position: relative; z-index: 2; padding: 10px 6px 6px 6px; text-align: left; }
+
+.bibleBookTitle {
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 800;
+  letter-spacing: .2px;
+  font-size: 34px;
+  margin: 6px 0 10px 0;
+  color: #1f1f2d;
+}
+
+.bibleRefLine { display: flex; align-items: baseline; gap: 10px; margin: 0; padding: 0; border-bottom: none; }
+.bibleRefLabel { font-size: 13px; opacity: .75; }
+.bibleRefValue { font-size: 18px; font-weight: 800; }
+
+.bibleDisclaimer {
+  margin: 10px 0 0 0;
+  font-size: 13px;
+  opacity: .72;
+  line-height: 1.35;
+}
+
+.bibleActionsRow {
+  position: relative;
+  z-index: 2;
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: 52px 1fr 52px;
+  gap: 10px;
+  align-items: center;
+}
+
+.bibleActionsCenter {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.biblePageBtn {
+  margin-left: 0;
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  border: 1px solid rgba(0,0,0,0.10);
+  background: rgba(102,126,234,0.12);
+  color: #1f1f2d;
+  font-size: 18px;
+  box-shadow: 0 10px 18px rgba(0,0,0,0.10);
+}
+
+.biblePageBtn:hover { background: rgba(102,126,234,0.18); }
+.biblePageBtnGhost { background: rgba(0,0,0,0.04); }
+.biblePageBtnNext { background: rgba(102,126,234,0.16); }
+
+.biblePrimaryInk,
+.bibleSecondaryInk {
+  margin-left: 0;
+  border-radius: 999px;
+  min-height: 46px;
+  padding: 10px 14px;
+  box-shadow: 0 12px 22px rgba(0,0,0,0.10);
+}
+
+.biblePrimaryInk {
+  background: linear-gradient(135deg, rgba(102,126,234,0.95), rgba(118,75,162,0.92));
+}
+
+.bibleSecondaryInk {
+  background: rgba(0,0,0,0.06);
+  color: #1f1f2d;
+  border: 1px solid rgba(0,0,0,0.10);
+}
+.bibleSecondaryInk:hover { background: rgba(0,0,0,0.10); }
+
+.bibleSeals {
+  position: relative;
+  z-index: 2;
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.bibleSeal {
+  background: rgba(0,0,0,0.04);
+  border: 1px solid rgba(0,0,0,0.10);
+  border-radius: 16px;
+  padding: 12px;
+  box-shadow: 0 12px 24px rgba(0,0,0,0.10);
+}
+
+.bibleSealTop { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.bibleSealEmoji { font-size: 18px; }
+.bibleSealStatus { font-weight: 800; letter-spacing: .2px; }
+
+/* ✅ rodapé com Dia X */
+.bibleFooterNote {
+  position: relative;
+  z-index: 2;
+  margin-top: 12px;
+  text-align: center;
+  font-size: 12.5px;
+  opacity: .80;
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.bibleFooterNote #bibFooterDia {
+  font-weight: 900;
+  letter-spacing: .2px;
+  opacity: .95;
+}
+
+.bibleFooterDot { opacity: .6; }
+
+/* ✅ virada de página mais forte (efeito livro) */
+@keyframes bibleTurnStrong {
+  0%   { opacity: .45; transform: translateX(22px) rotateY(-10deg) scale(0.992); filter: blur(0.9px); }
+  60%  { opacity: .85; transform: translateX(6px)  rotateY(-4deg)  scale(0.998); filter: blur(0.2px); }
+  100% { opacity: 1;   transform: translateX(0)   rotateY(0deg)   scale(1);     filter: blur(0px); }
+}
+
+.biblePaper.turning { animation: bibleTurnStrong 340ms cubic-bezier(.2,.85,.2,1); }
+
+/* brilho de virada */
+.biblePaper.turning::after {
+  opacity: .16;
+}
+
+/* responsivo */
+@media (max-width: 600px) {
+  .bibleBookTitle { font-size: 28px; }
+  .bibleActionsRow { grid-template-columns: 48px 1fr 48px; }
+  .biblePageBtn { width: 48px; height: 48px; border-radius: 14px; }
+  .bibleSeals { grid-template-columns: 1fr; }
+}
+
+/* dark mode específico pro papel */
+@media (prefers-color-scheme: dark) {
+  .biblePaper {
     border-color: rgba(255,255,255,0.10);
-  }
-  .btnMenuIcon {
-    background: rgba(102,126,234,0.20);
-  }
-
-  /* voltar no dark */
-  .btnVoltar {
-    border-color: rgba(255,255,255,0.22);
+    background:
+      linear-gradient(180deg, rgba(42,42,61,0.92), rgba(42,42,61,0.88)),
+      radial-gradient(900px 420px at 10% 5%, rgba(255,255,255,0.08), transparent 55%),
+      radial-gradient(900px 420px at 90% 10%, rgba(255,255,255,0.05), transparent 60%);
   }
 
-  .tttBadge {
-    background: rgba(102,126,234,0.18);
-    border-color: rgba(255,255,255,0.10);
+  .biblePaper::before {
+    opacity: .08;
+    background-image:
+      repeating-linear-gradient(
+        0deg,
+        rgba(255,255,255,0.08),
+        rgba(255,255,255,0.08) 1px,
+        transparent 1px,
+        transparent 26px
+      );
   }
 
-  .tttCasa {
-    border-color: rgba(255,255,255,0.10);
-  }
+  .bibleBookTitle { color: #f1f1ff; }
+  .bibleRefValue { color: #f1f1ff; }
+  .bibleSecondaryInk { color: #f1f1ff; background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.12); }
+  .bibleSeal { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.10); }
+  .bibleDayPill { border-color: rgba(255,255,255,0.10); }
+  .biblePageBtn { border-color: rgba(255,255,255,0.12); color: #f1f1ff; }
+  .biblePageBtnGhost { background: rgba(255,255,255,0.06); }
 
-  /* bíblia no dark */
-  .verseCard,
-  .bibleUserCard {
-    border-color: rgba(255,255,255,0.10);
-  }
-  .badgeStatus {
-    border-color: rgba(255,255,255,0.10);
+  .bibleGoldSeal {
+    color: #2a1f00;
+    border-color: rgba(255,255,255,0.08);
+    box-shadow: 0 14px 28px rgba(0,0,0,0.28);
   }
 }

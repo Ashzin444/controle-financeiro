@@ -56,7 +56,7 @@
             </div>
           </button>
 
-          <!-- NOVO: BÍBLIA -->
+          <!-- BÍBLIA -->
           <button class="btnMenu" onclick="irPara('biblia')">
             <div class="btnMenuIcon">📖</div>
             <div class="btnMenuTexto">
@@ -93,13 +93,11 @@
         <button class="btnVoltar" onclick="irPara('home')">⬅️ Voltar</button>
       </section>
 
-      <!-- MÊS -->
       <section>
         <h2>🗓️ Mês</h2>
         <input id="mesRef" type="month" />
       </section>
 
-      <!-- RESUMO -->
       <section>
         <h2>Resumo do Mês</h2>
 
@@ -115,7 +113,6 @@
 
       <hr />
 
-      <!-- ENTRADAS -->
       <section>
         <h2>Entradas</h2>
         <button onclick="adicionarEntrada()">Adicionar Entrada</button>
@@ -124,14 +121,12 @@
 
       <hr />
 
-      <!-- VENCIMENTOS -->
       <section>
         <h2>📅 Vencimentos</h2>
         <button onclick="adicionarVencimento()">Adicionar Vencimento</button>
         <ul id="listaVencimentos"></ul>
       </section>
 
-      <!-- SAÍDAS -->
       <section>
         <h2>Saídas</h2>
         <button onclick="adicionarSaida()">Adicionar Saída</button>
@@ -140,7 +135,7 @@
     </div>
 
     <!-- =====================
-         TELA BÍBLIA
+         TELA BÍBLIA (CONCEITO 1 - PÁGINA DE LIVRO)
     ====================== -->
     <div id="telaBiblia" class="tela" style="display:none;">
 
@@ -148,56 +143,80 @@
         <button class="btnVoltar" onclick="irPara('home')">⬅️ Voltar</button>
       </section>
 
-      <section>
-        <h2>📖 Checklist da Bíblia</h2>
-        <p style="margin:0; opacity:.85;">
-          Um versículo por dia, do começo ao fim — e cada um marca no seu tempo.
-        </p>
-      </section>
+      <div class="bibleBookStage">
+        <div class="bibleAmbientGlow"></div>
 
-      <!-- VERSÍCULO DO DIA -->
-      <section>
-        <h2>Versículo do dia</h2>
+        <div class="biblePaper" id="biblePaper">
+          <div class="bibleBookmark" aria-hidden="true"></div>
 
-        <p>
-          <strong id="bibDiaLabel">Carregando...</strong>
-        </p>
+          <!-- ✅ selo dourado quando os dois leram -->
+          <div class="bibleGoldSeal" id="bibGoldSeal" style="display:none;">
+            🏅 Leitura completa (os dois)
+          </div>
 
-        <p style="margin-top:8px; opacity:.85;">
-          Referência: <span id="bibRef">—</span>
-        </p>
+          <div class="bibleHeader">
+            <div class="bibleDayPill">
+              <span class="bibleDayIcon">📜</span>
+              <strong id="bibDiaLabel">Carregando...</strong>
+            </div>
 
-        <div class="acoesResumo">
-          <button onclick="marcarLeituraBiblia(true)">✅ Marcar como lido</button>
-          <button class="btnSecundario" onclick="marcarLeituraBiblia(false)">↩️ Desmarcar</button>
-        </div>
-      </section>
+            <div class="bibleHeaderRight">
+              <span class="bibleTinyHint">Página de leitura</span>
+            </div>
+          </div>
 
-      <!-- STATUS DOS DOIS -->
-      <section>
-        <h2>Status</h2>
+          <div class="bibleTitleArea">
+            <h2 class="bibleBookTitle" id="bibBookTitle">—</h2>
 
-        <div class="gridBiblia">
-          <div class="cardBibliaPessoa">
-            <h3 style="margin:0 0 8px 0;">👤 Eu</h3>
-            <p style="margin:0;">
-              <span id="bibStatusEu">—</span>
+            <p class="bibleRefLine">
+              <span class="bibleRefLabel">Referência</span>
+              <span class="bibleRefValue" id="bibRef">—</span>
+            </p>
+
+            <p class="bibleDisclaimer">
+              (O texto não aparece aqui por direitos autorais de traduções — vocês leem no app/Bíblia que preferirem 💜)
             </p>
           </div>
 
-          <div class="cardBibliaPessoa">
-            <h3 style="margin:0 0 8px 0;">👤 Ela</h3>
-            <p style="margin:0;">
-              <span id="bibStatusEla">—</span>
-            </p>
+          <div class="bibleActionsRow">
+            <button class="biblePageBtn biblePageBtnGhost" onclick="anteriorVersiculoBiblia()" title="Anterior">⏮️</button>
+
+            <div class="bibleActionsCenter">
+              <button class="biblePrimaryInk" onclick="marcarLeituraBiblia(true)">✍️ Assinar leitura</button>
+              <button class="bibleSecondaryInk" onclick="marcarLeituraBiblia(false)">↩️ Remover assinatura</button>
+            </div>
+
+            <button class="biblePageBtn biblePageBtnNext" onclick="proximoVersiculoBiblia()" title="Próximo">⏭️</button>
+          </div>
+
+          <div class="bibleSeals">
+            <div class="bibleSeal">
+              <div class="bibleSealTop">
+                <span class="bibleSealEmoji">👤</span>
+                <strong>Eu</strong>
+              </div>
+              <div class="bibleSealStatus" id="bibStatusEu">—</div>
+            </div>
+
+            <div class="bibleSeal">
+              <div class="bibleSealTop">
+                <span class="bibleSealEmoji">👤</span>
+                <strong>Ela</strong>
+              </div>
+              <div class="bibleSealStatus" id="bibStatusEla">—</div>
+            </div>
+          </div>
+
+          <!-- ✅ rodapé com "Dia X" (não página) -->
+          <div class="bibleFooterNote">
+            <span class="bibleFooterDot">•</span>
+            <span id="bibFooterDia">Dia —</span>
+            <span class="bibleFooterDot">•</span>
+            Sincronizado pros dois ao virar a página
+            <span class="bibleFooterDot">•</span>
           </div>
         </div>
-
-        <p style="margin:12px 0 0 0; font-size:13px; opacity:.75;">
-          Obs: o texto do versículo não aparece aqui para evitar problemas de direitos autorais de traduções.
-          A gente usa a referência e vocês leem na Bíblia/app que preferirem 💜
-        </p>
-      </section>
+      </div>
     </div>
 
     <!-- =====================
