@@ -428,6 +428,95 @@ strong {
 }
 
 /* =========================
+   BÍBLIA (CHECKLIST - EU / ELA)
+========================= */
+.bibleTopo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.bibleData {
+  font-size: 14px;
+  opacity: .8;
+}
+
+.verseCard {
+  background: var(--cor-fundo-item);
+  border: 1px solid rgba(0,0,0,0.06);
+  border-radius: 14px;
+  padding: 12px;
+}
+
+.verseRef {
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.verseText {
+  margin: 0;
+  line-height: 1.5;
+  opacity: .95;
+}
+
+.bibleGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.bibleUserCard {
+  background: var(--cor-fundo-item);
+  border: 1px solid rgba(0,0,0,0.06);
+  border-radius: 14px;
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.bibleUserHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.bibleUserHeader strong {
+  font-size: 16px;
+}
+
+.badgeStatus {
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  border: 1px solid rgba(0,0,0,0.06);
+  background: rgba(102,126,234,0.10);
+  white-space: nowrap;
+}
+
+.badgeOk {
+  background: rgba(46, 204, 113, 0.14);
+}
+
+.badgePendente {
+  background: rgba(255, 193, 7, 0.16);
+}
+
+.btnCheck {
+  width: 100%;
+  margin-left: 0;
+}
+
+.bibleHint {
+  margin: 0;
+  font-size: 13px;
+  opacity: .8;
+}
+
+/* =========================
    ANIMAÇÃO
 ========================= */
 @keyframes fadeUp {
@@ -494,6 +583,10 @@ strong {
     min-height: 86px;
     font-size: 38px;
   }
+
+  .bibleGrid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 360px) {
@@ -555,6 +648,15 @@ strong {
   }
 
   .tttCasa {
+    border-color: rgba(255,255,255,0.10);
+  }
+
+  /* bíblia no dark */
+  .verseCard,
+  .bibleUserCard {
+    border-color: rgba(255,255,255,0.10);
+  }
+  .badgeStatus {
     border-color: rgba(255,255,255,0.10);
   }
 }

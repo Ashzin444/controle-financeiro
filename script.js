@@ -2,8 +2,7 @@
 const firebaseConfig = {
   apiKey: "AIzaSyDFDfIyUYtQkH_OvcuOjbwesTph2K1zzpM",
   authDomain: "controle-financeiro-casa-c5fac.firebaseapp.com",
-  // ✅ CORRIGIDO: projectId é só o ID do projeto (sem .firebaseapp.com)
-  projectId: "controle-financeiro-casa-c5fac",
+  projectId: "controle-financeiro-casa-c5fac", // ✅ correto
   storageBucket: "controle-financeiro-casa-c5fac.appspot.com",
   messagingSenderId: "47902080482",
   appId: "1:47902080482:web:ebcbe048d64aa9bfc2cdbb"
@@ -18,8 +17,12 @@ const entradasRef = db.collection("entradas");
 const saidasRef = db.collection("saidas");
 const vencimentosRef = db.collection("vencimentos");
 
-// ✅ NOVO: coleção do jogo da velha
+// ✅ Jogo da velha
 const tttRoomsRef = db.collection("tttRooms");
+
+// ✅ Bíblia
+const bibliaPlanRef = db.collection("biblia_plan");
+const bibliaLeiturasRef = db.collection("biblia_leituras");
 
 // ================= ESTADO (FINANCEIRO) =================
 let entradas = [];
@@ -36,11 +39,15 @@ let primeiraCargaVencimentos = true;
 
 let vencimentosInterval = null;
 
+// ================= BÍBLIA (LISTENER) =================
+let unsubscribeBibliaDia = null;
+
 // ================= NAVEGAÇÃO (HOME / TELAS) =================
 function irPara(tela) {
   const mapIds = {
     home: "telaHome",
     financeiro: "telaFinanceiro",
+    biblia: "telaBiblia",
     jogos: "telaJogos",
     cinema: "telaCinema"
   };
@@ -55,6 +62,7 @@ function irPara(tela) {
     const nomes = {
       home: "Nosso Espaço",
       financeiro: "Nosso Controle Financeiro",
+      biblia: "Bíblia (Checklist)",
       jogos: "Jogos",
       cinema: "Cinema"
     };
@@ -66,6 +74,9 @@ function irPara(tela) {
 
   // Quando entrar em jogos, tenta “hidratar” UI do jogo (se existir no HTML)
   if (tela === "jogos") tttRender();
+
+  // Quando entrar na Bíblia, carrega o dia
+  if (tela === "biblia") carregarBibliaDoDia();
 }
 
 // ================= MÊS/ANO (SEPARAÇÃO) =================
@@ -150,8 +161,9 @@ function login() {
 }
 
 function logout() {
-  // ao sair, desconecta sala do jogo
+  // ao sair, desconecta sala do jogo e listener bíblia
   tttSairDaSalaSilencioso();
+  pararBibliaListener();
   auth.signOut();
 }
 
@@ -279,6 +291,8 @@ auth.onAuthStateChanged(user => {
     tttAutoRetomar();
   } else {
     pararListeners();
+    pararBibliaListener();
+
     if (vencimentosInterval) clearInterval(vencimentosInterval);
     vencimentosInterval = null;
 
@@ -310,39 +324,6 @@ function iniciarListeners() {
       entradas = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
       atualizarEntradas();
       atualizarSaldo();
-
-      if (!primeiraCargaEntradas) {
-        snapshot.docChanges().forEach(change => {
-          const d = change.doc.data();
-          if (!d) return;
-
-          const meuEmail = auth.currentUser?.email;
-          if (!meuEmail) return;
-
-          if (d.usuario && d.usuario !== meuEmail) {
-            if (change.type === "added") {
-              notificarUmaVez(
-                `entrada_added_${change.doc.id}`,
-                "💰 Nova entrada",
-                `${d.titulo} - R$ ${Number(d.valor).toFixed(2)}`
-              );
-            } else if (change.type === "modified") {
-              notificarUmaVez(
-                `entrada_modified_${change.doc.id}_${keyDiaAtual()}`,
-                "✏️ Entrada atualizada",
-                `${d.titulo} - R$ ${Number(d.valor).toFixed(2)}`
-              );
-            } else if (change.type === "removed") {
-              notificarUmaVez(
-                `entrada_removed_${change.doc.id}_${keyDiaAtual()}`,
-                "🗑️ Entrada removida",
-                "Uma entrada foi excluída"
-              );
-            }
-          }
-        });
-      }
-
       primeiraCargaEntradas = false;
     });
 
@@ -353,39 +334,6 @@ function iniciarListeners() {
       saidas = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
       atualizarSaidas();
       atualizarSaldo();
-
-      if (!primeiraCargaSaidas) {
-        snapshot.docChanges().forEach(change => {
-          const d = change.doc.data();
-          if (!d) return;
-
-          const meuEmail = auth.currentUser?.email;
-          if (!meuEmail) return;
-
-          if (d.usuario && d.usuario !== meuEmail) {
-            if (change.type === "added") {
-              notificarUmaVez(
-                `saida_added_${change.doc.id}`,
-                "💸 Nova saída",
-                `${d.titulo} - R$ ${Number(d.valor).toFixed(2)}`
-              );
-            } else if (change.type === "modified") {
-              notificarUmaVez(
-                `saida_modified_${change.doc.id}_${keyDiaAtual()}`,
-                "✏️ Saída atualizada",
-                `${d.titulo} - R$ ${Number(d.valor).toFixed(2)}`
-              );
-            } else if (change.type === "removed") {
-              notificarUmaVez(
-                `saida_removed_${change.doc.id}_${keyDiaAtual()}`,
-                "🗑️ Saída removida",
-                "Uma saída foi excluída"
-              );
-            }
-          }
-        });
-      }
-
       primeiraCargaSaidas = false;
     });
 
@@ -395,40 +343,6 @@ function iniciarListeners() {
     .onSnapshot(snapshot => {
       vencimentos = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
       atualizarVencimentos();
-
-      if (!primeiraCargaVencimentos) {
-        snapshot.docChanges().forEach(change => {
-          const d = change.doc.data();
-          if (!d) return;
-
-          const meuEmail = auth.currentUser?.email;
-          if (!meuEmail) return;
-
-          if (d.usuario && d.usuario !== meuEmail) {
-            if (change.type === "added") {
-              notificarUmaVez(
-                `venc_added_${change.doc.id}`,
-                "📅 Novo vencimento",
-                `${d.titulo} (dia ${d.dia}) - R$ ${Number(d.valor).toFixed(2)}`
-              );
-            } else if (change.type === "modified") {
-              const status = d.pago ? "Pago ✅" : "Atualizado ✏️";
-              notificarUmaVez(
-                `venc_modified_${change.doc.id}_${keyDiaAtual()}`,
-                `📅 Vencimento ${status}`,
-                `${d.titulo} (dia ${d.dia})`
-              );
-            } else if (change.type === "removed") {
-              notificarUmaVez(
-                `venc_removed_${change.doc.id}_${keyDiaAtual()}`,
-                "🗑️ Vencimento removido",
-                "Um vencimento foi excluído"
-              );
-            }
-          }
-        });
-      }
-
       primeiraCargaVencimentos = false;
       verificarVencimentos(false);
     });
@@ -658,10 +572,151 @@ function verificarVencimentos(forcar) {
 }
 
 /* =========================================================
+   BÍBLIA (CHECKLIST)
+   - 1 referência por dia
+   - status separado (Eu / Ela)
+========================================================= */
+
+// ✅ Data base do plano (Dia 1)
+const BIBLIA_START_DATE = "2026-01-01";
+
+// fallback pequeno (se ainda não criou biblia_plan)
+const fallbackPlan = [
+  { ref: "Gênesis 1:1", label: "Dia 1" },
+  { ref: "Gênesis 1:2", label: "Dia 2" },
+  { ref: "Gênesis 1:3", label: "Dia 3" },
+  { ref: "Gênesis 1:4", label: "Dia 4" },
+  { ref: "Gênesis 1:5", label: "Dia 5" },
+  { ref: "Gênesis 1:6", label: "Dia 6" },
+  { ref: "Gênesis 1:7", label: "Dia 7" }
+];
+
+function pararBibliaListener() {
+  if (unsubscribeBibliaDia) unsubscribeBibliaDia();
+  unsubscribeBibliaDia = null;
+}
+
+function obterPapelBiblia() {
+  let papel = localStorage.getItem("biblia_papel"); // "eu" | "ela"
+  if (papel === "eu" || papel === "ela") return papel;
+
+  const souEu = confirm("Este aparelho é o SEU?\nOK = Eu\nCancelar = Ela");
+  papel = souEu ? "eu" : "ela";
+  localStorage.setItem("biblia_papel", papel);
+  return papel;
+}
+
+function formatarDataYMD(date = new Date()) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function bibliaDiaIndexHoje() {
+  const start = new Date(BIBLIA_START_DATE + "T00:00:00");
+  const hoje = new Date();
+  const ms = hoje.getTime() - start.getTime();
+  const dias = Math.floor(ms / 86400000) + 1;
+  return Math.max(1, dias);
+}
+
+async function carregarBibliaDoDia() {
+  const user = auth.currentUser;
+  if (!user) return;
+
+  obterPapelBiblia(); // garante que já está definido
+
+  const ymd = formatarDataYMD(new Date());
+  const dayIndex = bibliaDiaIndexHoje();
+
+  // 1) Puxa referência do plano (Firestore) ou fallback
+  let refTexto = null;
+  let labelTexto = `Dia ${dayIndex}`;
+
+  try {
+    const docPlan = await bibliaPlanRef.doc(String(dayIndex)).get();
+    if (docPlan.exists) {
+      const data = docPlan.data() || {};
+      if (data.ref) refTexto = String(data.ref);
+      if (data.label) labelTexto = String(data.label);
+    }
+  } catch (e) {
+    // silencioso
+  }
+
+  if (!refTexto) {
+    const fb = fallbackPlan[(dayIndex - 1) % fallbackPlan.length];
+    refTexto = fb.ref;
+    labelTexto = fb.label ? fb.label : `Dia ${dayIndex}`;
+  }
+
+  // 2) Atualiza UI (se existir)
+  const elDia = document.getElementById("bibDiaLabel");
+  const elRef = document.getElementById("bibRef");
+  if (elDia) elDia.textContent = labelTexto;
+  if (elRef) elRef.textContent = refTexto;
+
+  // 3) Listener do status do dia (Eu/Ela)
+  pararBibliaListener();
+
+  unsubscribeBibliaDia = bibliaLeiturasRef.doc(ymd).onSnapshot(snap => {
+    const data = snap.exists ? (snap.data() || {}) : {};
+
+    const euLido = !!data.euLido;
+    const elaLido = !!data.elaLido;
+
+    const euEmail = data.euEmail ? String(data.euEmail) : "";
+    const elaEmail = data.elaEmail ? String(data.elaEmail) : "";
+
+    const euTxt = euLido ? "✅ Lido" : "⏳ Pendente";
+    const elaTxt = elaLido ? "✅ Lido" : "⏳ Pendente";
+
+    const elEu = document.getElementById("bibStatusEu");
+    const elEla = document.getElementById("bibStatusEla");
+
+    if (elEu) elEu.textContent = euEmail ? `${euTxt} (${euEmail})` : euTxt;
+    if (elEla) elEla.textContent = elaEmail ? `${elaTxt} (${elaEmail})` : elaTxt;
+  });
+
+  // 4) Salva ref/label no doc do dia (merge)
+  try {
+    await bibliaLeiturasRef.doc(ymd).set(
+      { ref: refTexto, label: labelTexto, dayIndex },
+      { merge: true }
+    );
+  } catch (e) {
+    // silencioso
+  }
+}
+
+async function marcarLeituraBiblia(lido) {
+  const user = auth.currentUser;
+  if (!user) return alert("Faça login.");
+
+  const papel = obterPapelBiblia();
+  const ymd = formatarDataYMD(new Date());
+
+  const payload = {};
+  if (papel === "eu") {
+    payload.euLido = !!lido;
+    payload.euEmail = user.email || "";
+    payload.euEm = firebase.firestore.FieldValue.serverTimestamp();
+  } else {
+    payload.elaLido = !!lido;
+    payload.elaEmail = user.email || "";
+    payload.elaEm = firebase.firestore.FieldValue.serverTimestamp();
+  }
+
+  try {
+    await bibliaLeiturasRef.doc(ymd).set(payload, { merge: true });
+  } catch (e) {
+    alert("Erro ao salvar leitura: " + (e.message || e));
+  }
+}
+
+/* =========================================================
    JOGO DA VELHA (Tempo real com Firestore)
-   - 1 sala = 1 doc em tttRooms
-   - 2 jogadores (X e O)
-   - turn: "X" ou "O"
 ========================================================= */
 
 let tttRoomId = localStorage.getItem("ttt_roomId") || "";
@@ -670,11 +725,8 @@ let tttUnsub = null;
 let tttState = null;
 
 function tttAutoRetomar() {
-  // só tenta retomar se tem sala salva
   if (!tttRoomId) return;
-  // não força navegar pra tela jogos, só prepara snapshot
   tttEntrarSala(tttRoomId, true).catch(() => {
-    // se deu ruim (sala apagada), limpa
     localStorage.removeItem("ttt_roomId");
     localStorage.removeItem("ttt_player");
     tttRoomId = "";
@@ -692,7 +744,6 @@ function tttSetText(id, txt) {
 }
 
 function tttRender() {
-  // atualiza UI se existir no HTML
   const inp = tttGetEl("tttRoomId");
   if (inp && tttRoomId) inp.value = tttRoomId;
 
@@ -701,8 +752,11 @@ function tttRender() {
     tttSetText("tttMe", tttPlayer ? `Você: ${tttPlayer}` : "Você: —");
     tttSetText("tttTurn", "Vez: —");
     tttSetText("tttRoomBadge", tttRoomId ? `Sala: ${tttRoomId}` : "Sala: —");
-    // tabuleiro “limpo”
-    for (let i = 0; i < 9; i++) tttSetText(`tttCell${i}`, "");
+    for (let i = 0; i < 9; i++) {
+      tttSetText(`tttCell${i}`, "");
+      const btn = tttGetEl(`tttBtn${i}`);
+      if (btn) btn.disabled = true;
+    }
     return;
   }
 
@@ -728,7 +782,6 @@ function tttRender() {
   const b = Array.isArray(tttState.board) ? tttState.board : Array(9).fill("");
   for (let i = 0; i < 9; i++) tttSetText(`tttCell${i}`, b[i] || "");
 
-  // habilita/desabilita botões de casa (se existir)
   const podeJogarAgora =
     status === "playing" &&
     !winner &&
@@ -744,7 +797,6 @@ function tttRender() {
 }
 
 function tttGerarIdCurto() {
-  // 6 chars base36
   return Math.random().toString(36).slice(2, 8).toUpperCase();
 }
 
@@ -764,7 +816,7 @@ async function tttCriarSala() {
     },
     board: Array(9).fill(""),
     turn: "X",
-    status: "waiting", // waiting | playing | finished
+    status: "waiting",
     winner: "",
     moves: 0,
     lastMoveAt: null
@@ -787,7 +839,6 @@ async function tttEntrarSala(roomId, silencioso) {
     return;
   }
 
-  // se já estava em outra sala, desliga listener
   if (tttUnsub) {
     tttUnsub();
     tttUnsub = null;
@@ -803,7 +854,6 @@ async function tttEntrarSala(roomId, silencioso) {
   const data = snap.data() || {};
   const players = data.players || {};
 
-  // decide se você é X ou O
   let meuSimbolo = "";
   if (players.X === user.email) meuSimbolo = "X";
   else if (players.O === user.email) meuSimbolo = "O";
@@ -814,12 +864,10 @@ async function tttEntrarSala(roomId, silencioso) {
     throw new Error("Sala cheia");
   }
 
-  // escreve player se necessário
   const updates = {};
   if (meuSimbolo === "X" && players.X !== user.email) updates["players.X"] = user.email;
   if (meuSimbolo === "O" && players.O !== user.email) updates["players.O"] = user.email;
 
-  // se agora tem os dois, vira playing
   const novoPlayers = {
     X: (updates["players.X"] || players.X || null),
     O: (updates["players.O"] || players.O || null)
@@ -832,16 +880,13 @@ async function tttEntrarSala(roomId, silencioso) {
 
   if (Object.keys(updates).length) await docRef.update(updates);
 
-  // salva local
   tttRoomId = roomId;
   tttPlayer = meuSimbolo;
   localStorage.setItem("ttt_roomId", tttRoomId);
   localStorage.setItem("ttt_player", tttPlayer);
 
-  // ativa listener realtime
   tttUnsub = docRef.onSnapshot(s => {
     if (!s.exists) {
-      // sala foi apagada
       tttState = null;
       tttRender();
       return;
@@ -850,7 +895,6 @@ async function tttEntrarSala(roomId, silencioso) {
     tttRender();
   });
 
-  // se usuário entrou pelo fluxo normal, já manda pra tela jogos
   if (!silencioso) irPara("jogos");
 }
 
@@ -913,14 +957,11 @@ async function tttJogar(pos) {
     if (winner) throw new Error("Partida já terminou");
     if (!tttPlayer) throw new Error("Sem símbolo");
 
-    // valida player
     if (tttPlayer === "X" && players.X !== user.email) throw new Error("Você não é o X desta sala");
     if (tttPlayer === "O" && players.O !== user.email) throw new Error("Você não é o O desta sala");
 
-    // valida turno
     if (turn !== tttPlayer) throw new Error("Não é sua vez");
 
-    // valida casa
     if (pos < 0 || pos > 8) throw new Error("Posição inválida");
     if (board[pos]) throw new Error("Casa ocupada");
 
@@ -942,7 +983,6 @@ async function tttJogar(pos) {
 
     tx.update(docRef, updates);
   }).catch(err => {
-    // não explode a UX, só avisa
     alert(err.message || "Não foi possível jogar agora.");
   });
 }
@@ -954,7 +994,6 @@ async function tttReiniciar() {
 
   const docRef = tttRoomsRef.doc(tttRoomId);
 
-  // só quem está na sala pode reiniciar
   const snap = await docRef.get();
   if (!snap.exists) return alert("Sala não existe.");
 
@@ -976,10 +1015,28 @@ async function tttReiniciar() {
   });
 }
 
-// =========================================================
-// ✅ FUNÇÕES GLOBAIS pra botões do HTML do jogo
-// (deixe assim, pra poder usar onclick="...")
-// =========================================================
+// ================= EXPOR FUNÇÕES PRO HTML (onclick) =================
+window.irPara = irPara;
+window.login = login;
+window.logout = logout;
+
+window.ativarNotificacoes = ativarNotificacoes;
+window.testarNotificacao = testarNotificacao;
+
+window.adicionarEntrada = adicionarEntrada;
+window.adicionarSaida = adicionarSaida;
+window.adicionarVencimento = adicionarVencimento;
+window.editarEntrada = editarEntrada;
+window.editarSaida = editarSaida;
+window.excluirEntrada = excluirEntrada;
+window.excluirSaida = excluirSaida;
+window.excluirVencimento = excluirVencimento;
+window.marcarPago = marcarPago;
+
+// Bíblia
+window.marcarLeituraBiblia = marcarLeituraBiblia;
+
+// Jogo da velha
 window.tttCriarSala = tttCriarSala;
 window.tttEntrarSalaPeloInput = tttEntrarSalaPeloInput;
 window.tttSairDaSala = tttSairDaSala;
