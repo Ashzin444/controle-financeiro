@@ -93,11 +93,13 @@
         <button class="btnVoltar" onclick="irPara('home')">⬅️ Voltar</button>
       </section>
 
+      <!-- MÊS -->
       <section>
         <h2>🗓️ Mês</h2>
         <input id="mesRef" type="month" />
       </section>
 
+      <!-- RESUMO -->
       <section>
         <h2>Resumo do Mês</h2>
 
@@ -113,6 +115,7 @@
 
       <hr />
 
+      <!-- ENTRADAS -->
       <section>
         <h2>Entradas</h2>
         <button onclick="adicionarEntrada()">Adicionar Entrada</button>
@@ -121,12 +124,14 @@
 
       <hr />
 
+      <!-- VENCIMENTOS -->
       <section>
         <h2>📅 Vencimentos</h2>
         <button onclick="adicionarVencimento()">Adicionar Vencimento</button>
         <ul id="listaVencimentos"></ul>
       </section>
 
+      <!-- SAÍDAS -->
       <section>
         <h2>Saídas</h2>
         <button onclick="adicionarSaida()">Adicionar Saída</button>
@@ -149,7 +154,7 @@
         <div class="biblePaper" id="biblePaper">
           <div class="bibleBookmark" aria-hidden="true"></div>
 
-          <!-- ✅ selo dourado quando os dois leram -->
+          <!-- selo dourado quando os dois leram -->
           <div class="bibleGoldSeal" id="bibGoldSeal" style="display:none;">
             🏅 Leitura completa (os dois)
           </div>
@@ -184,6 +189,9 @@
             <div class="bibleActionsCenter">
               <button class="biblePrimaryInk" onclick="marcarLeituraBiblia(true)">✍️ Assinar leitura</button>
               <button class="bibleSecondaryInk" onclick="marcarLeituraBiblia(false)">↩️ Remover assinatura</button>
+
+              <!-- ✅ SOM DA PÁGINA -->
+              <button class="bibleSoundBtn" id="bibSoundBtn" onclick="toggleSomBiblia()">🔊 Som: ON</button>
             </div>
 
             <button class="biblePageBtn biblePageBtnNext" onclick="proximoVersiculoBiblia()" title="Próximo">⏭️</button>
@@ -207,7 +215,7 @@
             </div>
           </div>
 
-          <!-- ✅ rodapé com "Dia X" (não página) -->
+          <!-- rodapé com "Dia X" -->
           <div class="bibleFooterNote">
             <span class="bibleFooterDot">•</span>
             <span id="bibFooterDia">Dia —</span>

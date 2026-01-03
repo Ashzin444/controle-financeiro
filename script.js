@@ -2,7 +2,7 @@
 const firebaseConfig = {
   apiKey: "AIzaSyDFDfIyUYtQkH_OvcuOjbwesTph2K1zzpM",
   authDomain: "controle-financeiro-casa-c5fac.firebaseapp.com",
-  projectId: "controle-financeiro-casa-c5fac", // ✅ correto
+  projectId: "controle-financeiro-casa-c5fac",
   storageBucket: "controle-financeiro-casa-c5fac.appspot.com",
   messagingSenderId: "47902080482",
   appId: "1:47902080482:web:ebcbe048d64aa9bfc2cdbb"
@@ -179,9 +179,7 @@ function ativarNotificacoes() {
   Notification.requestPermission().then(p => {
     if (p === "granted") {
       localStorage.setItem("notif_ativadas", "1");
-      new Notification("✅ Notificações ativadas!", {
-        body: "Agora o app pode te avisar quando tiver mudanças."
-      });
+      new Notification("✅ Notificações ativadas!", { body: "Agora o app pode te avisar quando tiver mudanças." });
     } else {
       alert("Permissão não concedida.");
     }
@@ -293,8 +291,7 @@ auth.onAuthStateChanged(user => {
 // ================= SERVICE WORKER REGISTER =================
 function registrarServiceWorker() {
   if (!("serviceWorker" in navigator)) return;
-  navigator.serviceWorker.register("./service-worker.js")
-    .catch(err => console.log("Erro SW:", err));
+  navigator.serviceWorker.register("./service-worker.js").catch(err => console.log("Erro SW:", err));
 }
 
 // ================= LISTENERS FIRESTORE (FINANCEIRO) =================
@@ -344,7 +341,7 @@ function pararListeners() {
   unsubscribeVencimentos = null;
 }
 
-// ================= FINANCEIRO =================
+// ================= ADICIONAR (FINANCEIRO) =================
 function adicionarEntrada() {
   const user = auth.currentUser;
   if (!user) return alert("Faça login.");
@@ -401,6 +398,7 @@ function adicionarVencimento() {
   });
 }
 
+// ================= LISTAS (FINANCEIRO) =================
 function atualizarEntradas() {
   const lista = document.getElementById("listaEntradas");
   const total = document.getElementById("totalEntradas");
@@ -463,6 +461,7 @@ function atualizarSaldo() {
   elSaldo.textContent = (totalEntradas - totalSaidas).toFixed(2);
 }
 
+// ================= EDITAR / EXCLUIR (FINANCEIRO) =================
 function excluirEntrada(id) { entradasRef.doc(id).delete(); }
 function excluirSaida(id) { saidasRef.doc(id).delete(); }
 
@@ -488,6 +487,7 @@ function editarSaida(id) {
   saidasRef.doc(id).update({ titulo, valor });
 }
 
+// ================= VENCIMENTOS (FINANCEIRO) =================
 function atualizarVencimentos() {
   const lista = document.getElementById("listaVencimentos");
   if (!lista) return;
@@ -551,10 +551,8 @@ function verificarVencimentos(forcar) {
 }
 
 /* =========================================================
-   BÍBLIA (CHECKLIST) - CONCEITO 1
+   BÍBLIA (CONCEITO 1)
 ========================================================= */
-
-const BIBLIA_START_DATE = "2026-01-01";
 
 const fallbackPlan = [
   { ref: "Gênesis 1:1", label: "Dia 1" },
@@ -586,7 +584,6 @@ function obterPapelBiblia() {
   return papel;
 }
 
-// ✅ título "Gênesis 1" a partir de "Gênesis 1:2"
 function bibliaExtrairLivroCapitulo(refTexto) {
   if (!refTexto) return "—";
   const m = String(refTexto).match(/^(.+?)\s+(\d+)(?::\d+)?$/);
@@ -601,6 +598,92 @@ function bibliaAnimarVirada() {
   void paper.offsetWidth;
   paper.classList.add("turning");
   setTimeout(() => paper.classList.remove("turning"), 420);
+}
+
+/* =========================
+   ✅ SOM DE VIRAR PÁGINA
+========================= */
+const BIBLIA_SOM_KEY = "biblia_som"; // "1" ligado | "0" desligado
+let _audioCtx = null;
+
+function bibliaSomAtivo() {
+  return localStorage.getItem(BIBLIA_SOM_KEY) !== "0";
+}
+
+function atualizarBotaoSomBiblia() {
+  const btn = document.getElementById("bibSoundBtn");
+  if (!btn) return;
+  btn.textContent = bibliaSomAtivo() ? "🔊 Som: ON" : "🔇 Som: OFF";
+}
+
+function ensureAudioContext() {
+  if (_audioCtx && _audioCtx.state !== "closed") return _audioCtx;
+  const Ctx = window.AudioContext || window.webkitAudioContext;
+  if (!Ctx) return null;
+  _audioCtx = new Ctx();
+  return _audioCtx;
+}
+
+// Ruído curto + filtro = “paper swipe”
+function tocarSomVirarPagina() {
+  if (!bibliaSomAtivo()) return;
+
+  const ctx = ensureAudioContext();
+  if (!ctx) return;
+
+  // em alguns celulares ele começa “suspended”
+  if (ctx.state === "suspended") {
+    ctx.resume().catch(() => {});
+  }
+
+  const now = ctx.currentTime;
+
+  const duration = 0.14; // curtinho
+  const bufferSize = Math.floor(ctx.sampleRate * duration);
+  const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+
+  // ruído branco com decaimento
+  for (let i = 0; i < bufferSize; i++) {
+    const t = i / bufferSize;
+    const env = Math.pow(1 - t, 2.2);
+    data[i] = (Math.random() * 2 - 1) * env * 0.55;
+  }
+
+  const src = ctx.createBufferSource();
+  src.buffer = buffer;
+
+  const bandpass = ctx.createBiquadFilter();
+  bandpass.type = "bandpass";
+  bandpass.frequency.setValueAtTime(1800, now);
+  bandpass.Q.setValueAtTime(0.9, now);
+
+  const hi = ctx.createBiquadFilter();
+  hi.type = "highpass";
+  hi.frequency.setValueAtTime(650, now);
+
+  const gain = ctx.createGain();
+  // bem baixinho
+  gain.gain.setValueAtTime(0.0001, now);
+  gain.gain.exponentialRampToValueAtTime(0.09, now + 0.02);
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+  src.connect(bandpass);
+  bandpass.connect(hi);
+  hi.connect(gain);
+  gain.connect(ctx.destination);
+
+  src.start(now);
+  src.stop(now + duration + 0.02);
+}
+
+function toggleSomBiblia() {
+  const novo = bibliaSomAtivo() ? "0" : "1";
+  localStorage.setItem(BIBLIA_SOM_KEY, novo);
+  atualizarBotaoSomBiblia();
+
+  // ao ligar, dá um “toquezinho” pra confirmar
+  if (novo === "1") tocarSomVirarPagina();
 }
 
 async function bibliaInitEstadoGlobal() {
@@ -655,6 +738,7 @@ async function carregarBibliaAtual(viaListener = false) {
   obterPapelBiblia();
   await bibliaInitEstadoGlobal();
   bibliaAtivarEstadoListener();
+  atualizarBotaoSomBiblia();
 
   const currentIndex = bibliaCurrentIndex;
 
@@ -683,10 +767,10 @@ async function carregarBibliaAtual(viaListener = false) {
   const elBookTitle = document.getElementById("bibBookTitle");
   const elFooterDia = document.getElementById("bibFooterDia");
 
-  if (elDia) elDia.textContent = labelTexto;           // ✅ “Dia 12”
+  if (elDia) elDia.textContent = labelTexto; // “Dia X”
   if (elRef) elRef.textContent = refTexto;
   if (elBookTitle) elBookTitle.textContent = bibliaExtrairLivroCapitulo(refTexto);
-  if (elFooterDia) elFooterDia.textContent = `Dia ${currentIndex}`; // ✅ rodapé “Dia X”
+  if (elFooterDia) elFooterDia.textContent = `Dia ${currentIndex}`;
 
   bibliaAnimarVirada();
 
@@ -713,7 +797,7 @@ async function carregarBibliaAtual(viaListener = false) {
     if (elEu) elEu.textContent = euEmail ? `${euTxt} (${euEmail})` : euTxt;
     if (elEla) elEla.textContent = elaEmail ? `${elaTxt} (${elaEmail})` : elaTxt;
 
-    // ✅ selo dourado quando os dois leram
+    // selo dourado
     const seal = document.getElementById("bibGoldSeal");
     if (seal) seal.style.display = (euLido && elaLido) ? "inline-flex" : "none";
   });
@@ -786,9 +870,15 @@ async function bibliaAnterior() {
   }
 }
 
-// wrappers pro onclick do index
-function proximoVersiculoBiblia() { return bibliaProximo(); }
-function anteriorVersiculoBiblia() { return bibliaAnterior(); }
+// wrappers do onclick: aqui é onde o som toca (clique do usuário)
+function proximoVersiculoBiblia() {
+  tocarSomVirarPagina();
+  return bibliaProximo();
+}
+function anteriorVersiculoBiblia() {
+  tocarSomVirarPagina();
+  return bibliaAnterior();
+}
 
 async function marcarLeituraBiblia(lido) {
   const user = auth.currentUser;
@@ -820,11 +910,11 @@ async function marcarLeituraBiblia(lido) {
 }
 
 /* =========================================================
-   JOGO DA VELHA (mantido)
+   JOGO DA VELHA (Tempo real com Firestore) - mantido
 ========================================================= */
 
 let tttRoomId = localStorage.getItem("ttt_roomId") || "";
-let tttPlayer = localStorage.getItem("ttt_player") || "";
+let tttPlayer = localStorage.getItem("ttt_player") || ""; // "X" / "O"
 let tttUnsub = null;
 let tttState = null;
 
@@ -838,8 +928,14 @@ function tttAutoRetomar() {
   });
 }
 
-function tttGetEl(id) { return document.getElementById(id); }
-function tttSetText(id, txt) { const el = tttGetEl(id); if (el) el.textContent = txt; }
+function tttGetEl(id) {
+  return document.getElementById(id);
+}
+
+function tttSetText(id, txt) {
+  const el = tttGetEl(id);
+  if (el) el.textContent = txt;
+}
 
 function tttRender() {
   const inp = tttGetEl("tttRoomId");
@@ -894,11 +990,210 @@ function tttRender() {
   }
 }
 
-function tttGerarIdCurto() { return Math.random().toString(36).slice(2, 8).toUpperCase(); }
+function tttGerarIdCurto() {
+  return Math.random().toString(36).slice(2, 8).toUpperCase();
+}
 
-// (resto do jogo mantido exatamente como estava no seu script anterior)
-// ... se você quiser, me manda seu script completo com o jogo e eu devolvo inteiro
-// (mas como você já tinha tudo ok, não mexi nessa parte)
+async function tttCriarSala() {
+  const user = auth.currentUser;
+  if (!user) return alert("Faça login.");
+
+  const roomId = tttGerarIdCurto();
+  const docRef = tttRoomsRef.doc(roomId);
+
+  await docRef.set({
+    roomId,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+    players: { X: user.email, O: null },
+    board: Array(9).fill(""),
+    turn: "X",
+    status: "waiting",
+    winner: "",
+    moves: 0,
+    lastMoveAt: null
+  });
+
+  await tttEntrarSala(roomId, false);
+}
+
+async function tttEntrarSalaPeloInput() {
+  const inp = tttGetEl("tttRoomId");
+  const roomId = (inp?.value || "").trim().toUpperCase();
+  if (!roomId) return alert("Digite o ID da sala.");
+  await tttEntrarSala(roomId, false);
+}
+
+async function tttEntrarSala(roomId, silencioso) {
+  const user = auth.currentUser;
+  if (!user) {
+    if (!silencioso) alert("Faça login.");
+    return;
+  }
+
+  if (tttUnsub) { tttUnsub(); tttUnsub = null; }
+
+  const docRef = tttRoomsRef.doc(roomId);
+  const snap = await docRef.get();
+  if (!snap.exists) {
+    if (!silencioso) alert("Sala não existe. Confira o ID.");
+    throw new Error("Sala não existe");
+  }
+
+  const data = snap.data() || {};
+  const players = data.players || {};
+
+  let meuSimbolo = "";
+  if (players.X === user.email) meuSimbolo = "X";
+  else if (players.O === user.email) meuSimbolo = "O";
+  else if (!players.X) meuSimbolo = "X";
+  else if (!players.O) meuSimbolo = "O";
+  else {
+    if (!silencioso) alert("Sala cheia (já tem 2 jogadores).");
+    throw new Error("Sala cheia");
+  }
+
+  const updates = {};
+  if (meuSimbolo === "X" && players.X !== user.email) updates["players.X"] = user.email;
+  if (meuSimbolo === "O" && players.O !== user.email) updates["players.O"] = user.email;
+
+  const novoPlayers = {
+    X: (updates["players.X"] || players.X || null),
+    O: (updates["players.O"] || players.O || null)
+  };
+
+  if (novoPlayers.X && novoPlayers.O && data.status === "waiting") {
+    updates.status = "playing";
+    updates.turn = "X";
+  }
+
+  if (Object.keys(updates).length) await docRef.update(updates);
+
+  tttRoomId = roomId;
+  tttPlayer = meuSimbolo;
+  localStorage.setItem("ttt_roomId", tttRoomId);
+  localStorage.setItem("ttt_player", tttPlayer);
+
+  tttUnsub = docRef.onSnapshot(s => {
+    if (!s.exists) { tttState = null; tttRender(); return; }
+    tttState = s.data() || null;
+    tttRender();
+  });
+
+  if (!silencioso) irPara("jogos");
+}
+
+function tttSairDaSala() {
+  tttSairDaSalaSilencioso();
+  alert("Você saiu da sala.");
+}
+
+function tttSairDaSalaSilencioso() {
+  if (tttUnsub) { tttUnsub(); tttUnsub = null; }
+  tttState = null;
+  tttRoomId = "";
+  tttPlayer = "";
+  localStorage.removeItem("ttt_roomId");
+  localStorage.removeItem("ttt_player");
+  tttRender();
+}
+
+function tttLinhasVitoria() {
+  return [
+    [0,1,2],[3,4,5],[6,7,8],
+    [0,3,6],[1,4,7],[2,5,8],
+    [0,4,8],[2,4,6]
+  ];
+}
+
+function tttChecarResultado(board) {
+  for (const [a,b,c] of tttLinhasVitoria()) {
+    if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+      return { winner: board[a], finished: true };
+    }
+  }
+  const cheio = board.every(x => x);
+  if (cheio) return { winner: "", finished: true };
+  return { winner: "", finished: false };
+}
+
+async function tttJogar(pos) {
+  const user = auth.currentUser;
+  if (!user) return alert("Faça login.");
+  if (!tttRoomId) return alert("Entre em uma sala.");
+
+  const docRef = tttRoomsRef.doc(tttRoomId);
+
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(docRef);
+    if (!snap.exists) throw new Error("Sala não existe");
+
+    const data = snap.data() || {};
+    const status = data.status || "waiting";
+    const turn = data.turn || "X";
+    const players = data.players || {};
+    const board = Array.isArray(data.board) ? [...data.board] : Array(9).fill("");
+    const winner = data.winner || "";
+
+    if (status !== "playing") throw new Error("Partida não está em andamento");
+    if (winner) throw new Error("Partida já terminou");
+    if (!tttPlayer) throw new Error("Sem símbolo");
+
+    if (tttPlayer === "X" && players.X !== user.email) throw new Error("Você não é o X desta sala");
+    if (tttPlayer === "O" && players.O !== user.email) throw new Error("Você não é o O desta sala");
+
+    if (turn !== tttPlayer) throw new Error("Não é sua vez");
+
+    if (pos < 0 || pos > 8) throw new Error("Posição inválida");
+    if (board[pos]) throw new Error("Casa ocupada");
+
+    board[pos] = tttPlayer;
+
+    const res = tttChecarResultado(board);
+    const updates = {
+      board,
+      moves: (Number(data.moves) || 0) + 1,
+      lastMoveAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+
+    if (res.finished) {
+      updates.status = "finished";
+      updates.winner = res.winner || "";
+    } else {
+      updates.turn = (tttPlayer === "X" ? "O" : "X");
+    }
+
+    tx.update(docRef, updates);
+  }).catch(err => {
+    alert(err.message || "Não foi possível jogar agora.");
+  });
+}
+
+async function tttReiniciar() {
+  const user = auth.currentUser;
+  if (!user) return alert("Faça login.");
+  if (!tttRoomId) return alert("Entre em uma sala.");
+
+  const docRef = tttRoomsRef.doc(tttRoomId);
+  const snap = await docRef.get();
+  if (!snap.exists) return alert("Sala não existe.");
+
+  const data = snap.data() || {};
+  const players = data.players || {};
+
+  const meuEmail = user.email;
+  if (players.X !== meuEmail && players.O !== meuEmail) {
+    return alert("Você não faz parte desta sala.");
+  }
+
+  await docRef.update({
+    board: Array(9).fill(""),
+    turn: "X",
+    status: (players.X && players.O) ? "playing" : "waiting",
+    winner: "",
+    moves: 0,
+    lastMoveAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+}
 
 // ================= EXPOR FUNÇÕES PRO HTML (onclick) =================
 window.irPara = irPara;
@@ -915,9 +1210,18 @@ window.editarEntrada = editarEntrada;
 window.editarSaida = editarSaida;
 window.excluirEntrada = excluirEntrada;
 window.excluirSaida = excluirSaida;
+window.excluirVencimento = excluirVencimento;
+window.marcarPago = marcarPago;
 
+// Bíblia
 window.marcarLeituraBiblia = marcarLeituraBiblia;
-window.bibliaProximo = bibliaProximo;
-window.bibliaAnterior = bibliaAnterior;
 window.proximoVersiculoBiblia = proximoVersiculoBiblia;
 window.anteriorVersiculoBiblia = anteriorVersiculoBiblia;
+window.toggleSomBiblia = toggleSomBiblia;
+
+// Jogo da velha
+window.tttCriarSala = tttCriarSala;
+window.tttEntrarSalaPeloInput = tttEntrarSalaPeloInput;
+window.tttSairDaSala = tttSairDaSala;
+window.tttReiniciar = tttReiniciar;
+window.tttJogar = tttJogar;
