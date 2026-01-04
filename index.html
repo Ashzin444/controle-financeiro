@@ -65,6 +65,15 @@
             </div>
           </button>
 
+          <!-- 💌 CARTINHAS -->
+          <button class="btnMenu" onclick="irPara('cartinhas')">
+            <div class="btnMenuIcon">💌</div>
+            <div class="btnMenuTexto">
+              <strong>Para você 💌</strong>
+              <span>Cartinhas surpresa (com data)</span>
+            </div>
+          </button>
+
           <button class="btnMenu" onclick="irPara('jogos')">
             <div class="btnMenuIcon">🎮</div>
             <div class="btnMenuTexto">
@@ -225,6 +234,116 @@
           </div>
         </div>
       </div>
+    </div>
+
+    <!-- =====================
+         TELA CARTINHAS 💌
+    ====================== -->
+    <div id="telaCartinhas" class="tela" style="display:none;">
+
+      <section class="cardVoltar">
+        <button class="btnVoltar" onclick="irPara('home')">⬅️ Voltar</button>
+      </section>
+
+      <section class="loveHero">
+        <h2>💌 Para você</h2>
+        <p style="margin:0; opacity:.85;">
+          Cartinhas surpresa entre <strong>Ash</strong> e <strong>Deh</strong>. Dá pra trancar e abrir só na data 💜
+        </p>
+      </section>
+
+      <!-- ESCREVER -->
+      <section class="loveCompose">
+        <h2>Escrever cartinha</h2>
+
+        <div class="loveGrid">
+          <div class="loveField">
+            <label for="loveTo">Para</label>
+            <select id="loveTo">
+              <option value="deh">Deh</option>
+              <option value="ash">Ash</option>
+            </select>
+            <small class="loveHint">O app já coloca o “para” como o outro automaticamente.</small>
+          </div>
+
+          <div class="loveField">
+            <label for="loveWhen">Abrir</label>
+            <select id="loveWhen" onchange="cartinhasTrocarModoData()">
+              <option value="now">Agora</option>
+              <option value="tomorrow">Amanhã</option>
+              <option value="date">Em uma data</option>
+            </select>
+
+            <div id="loveDateWrap" style="display:none; margin-top:10px;">
+              <label for="loveDate">Data</label>
+              <input id="loveDate" type="date" />
+              <small class="loveHint">A cartinha fica trancada até essa data.</small>
+            </div>
+          </div>
+        </div>
+
+        <div class="loveField" style="margin-top:12px;">
+          <label for="loveText">Sua mensagem</label>
+          <textarea id="loveText" rows="6" placeholder="Escreve algo bem lindo… 💜"></textarea>
+          <div class="loveRow">
+            <span class="loveMini" id="loveMeLabel">Você: —</span>
+            <button onclick="cartinhasEnviar()" class="loveSendBtn">💌 Enviar cartinha</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ✅ ABAS -->
+      <section class="loveTabsWrap">
+        <div class="loveTabs">
+          <button id="loveTabInbox" class="loveTab" onclick="cartinhasSetAba('inbox')">📥 Recebidas</button>
+          <button id="loveTabSent" class="loveTab" onclick="cartinhasSetAba('sent')">📤 Enviadas</button>
+          <button id="loveTabFav" class="loveTab" onclick="cartinhasSetAba('fav')">⭐ Favoritas</button>
+        </div>
+        <p class="loveTabsHint">Dica: clique na ⭐ para favoritar. Em “Enviadas” dá pra apagar 🗑️</p>
+      </section>
+
+      <!-- RECEBIDAS -->
+      <section id="loveSectionInbox">
+        <h2>Recebidas</h2>
+        <div id="loveInbox" class="loveList">
+          <p style="margin:0; opacity:.75;">Carregando…</p>
+        </div>
+      </section>
+
+      <!-- ENVIADAS -->
+      <section id="loveSectionSent" style="display:none;">
+        <h2>Enviadas</h2>
+        <div id="loveSent" class="loveList">
+          <p style="margin:0; opacity:.75;">Carregando…</p>
+        </div>
+      </section>
+
+      <!-- ⭐ FAVORITAS -->
+      <section id="loveSectionFav" style="display:none;">
+        <h2>⭐ Favoritas</h2>
+        <div id="loveFav" class="loveList">
+          <p style="margin:0; opacity:.75;">Carregando…</p>
+        </div>
+      </section>
+
+      <!-- MODAL DE LEITURA -->
+      <div id="loveModal" class="loveModal" style="display:none;" role="dialog" aria-modal="true">
+        <div class="loveModalBackdrop" onclick="cartinhasFecharModal()"></div>
+        <div class="loveModalCard">
+          <div class="loveModalTop">
+            <strong id="loveModalTitle">💌 Cartinha</strong>
+            <button class="loveModalClose" onclick="cartinhasFecharModal()">✖</button>
+          </div>
+
+          <div class="loveModalMeta" id="loveModalMeta">—</div>
+          <div class="loveModalBody" id="loveModalBody">—</div>
+
+          <div class="loveModalActions">
+            <button class="btnSecundario" onclick="cartinhasFecharModal()">Fechar</button>
+          </div>
+        </div>
+      </div>
+
     </div>
 
     <!-- =====================

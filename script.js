@@ -27,6 +27,9 @@ const bibliaLeiturasRef = db.collection("biblia_leituras");
 // ✅ estado global da bíblia (versículo atual compartilhado)
 const bibliaEstadoRef = db.collection("biblia_estado").doc("global");
 
+// ✅ CARTINHAS 💌
+const cartinhasRef = db.collection("cartinhas");
+
 // ================= ESTADO (FINANCEIRO) =================
 let entradas = [];
 let saidas = [];
@@ -50,12 +53,19 @@ let unsubscribeBibliaEstado = null;
 let bibliaCurrentIndex = 1;
 let bibliaCurrentDocId = "v1";
 
+// ================= CARTINHAS (LISTENERS) =================
+let unsubscribeLoveInbox = null;
+let unsubscribeLoveSent = null;
+let loveInbox = [];
+let loveSent = [];
+
 // ================= NAVEGAÇÃO =================
 function irPara(tela) {
   const mapIds = {
     home: "telaHome",
     financeiro: "telaFinanceiro",
     biblia: "telaBiblia",
+    cartinhas: "telaCartinhas",
     jogos: "telaJogos",
     cinema: "telaCinema"
   };
@@ -71,6 +81,7 @@ function irPara(tela) {
       home: "Nosso Espaço",
       financeiro: "Nosso Controle Financeiro",
       biblia: "Bíblia (Checklist)",
+      cartinhas: "Para você 💌",
       jogos: "Jogos",
       cinema: "Cinema"
     };
@@ -80,6 +91,7 @@ function irPara(tela) {
   if (tela === "financeiro") aplicarMesNoInput();
   if (tela === "jogos") tttRender();
   if (tela === "biblia") carregarBibliaAtual();
+  if (tela === "cartinhas") cartinhasInitTela();
 }
 
 // ================= MÊS/ANO =================
@@ -166,6 +178,7 @@ function logout() {
   tttSairDaSalaSilencioso();
   pararBibliaListener();
   pararBibliaEstadoListener();
+  cartinhasPararListeners();
   auth.signOut();
 }
 
@@ -275,10 +288,14 @@ auth.onAuthStateChanged(user => {
 
     bibliaInitEstadoGlobal().catch(() => {});
     bibliaAtivarEstadoListener();
+
+    // cartinhas: prepara defaults (sem abrir tela)
+    cartinhasPrepararDefaults();
   } else {
     pararListeners();
     pararBibliaListener();
     pararBibliaEstadoListener();
+    cartinhasPararListeners();
 
     if (vencimentosInterval) clearInterval(vencimentosInterval);
     vencimentosInterval = null;
@@ -551,7 +568,7 @@ function verificarVencimentos(forcar) {
 }
 
 /* =========================================================
-   BÍBLIA (CONCEITO 1)
+   BÍBLIA (CONCEITO 1) - mantido
 ========================================================= */
 
 const fallbackPlan = [
@@ -624,26 +641,23 @@ function ensureAudioContext() {
   return _audioCtx;
 }
 
-// Ruído curto + filtro = “paper swipe”
 function tocarSomVirarPagina() {
   if (!bibliaSomAtivo()) return;
 
   const ctx = ensureAudioContext();
   if (!ctx) return;
 
-  // em alguns celulares ele começa “suspended”
   if (ctx.state === "suspended") {
     ctx.resume().catch(() => {});
   }
 
   const now = ctx.currentTime;
 
-  const duration = 0.14; // curtinho
+  const duration = 0.14;
   const bufferSize = Math.floor(ctx.sampleRate * duration);
   const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
   const data = buffer.getChannelData(0);
 
-  // ruído branco com decaimento
   for (let i = 0; i < bufferSize; i++) {
     const t = i / bufferSize;
     const env = Math.pow(1 - t, 2.2);
@@ -663,7 +677,6 @@ function tocarSomVirarPagina() {
   hi.frequency.setValueAtTime(650, now);
 
   const gain = ctx.createGain();
-  // bem baixinho
   gain.gain.setValueAtTime(0.0001, now);
   gain.gain.exponentialRampToValueAtTime(0.09, now + 0.02);
   gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
@@ -681,8 +694,6 @@ function toggleSomBiblia() {
   const novo = bibliaSomAtivo() ? "0" : "1";
   localStorage.setItem(BIBLIA_SOM_KEY, novo);
   atualizarBotaoSomBiblia();
-
-  // ao ligar, dá um “toquezinho” pra confirmar
   if (novo === "1") tocarSomVirarPagina();
 }
 
@@ -742,7 +753,6 @@ async function carregarBibliaAtual(viaListener = false) {
 
   const currentIndex = bibliaCurrentIndex;
 
-  // 1) Plano ou fallback
   let refTexto = null;
   let labelTexto = `Dia ${currentIndex}`;
 
@@ -761,20 +771,18 @@ async function carregarBibliaAtual(viaListener = false) {
     labelTexto = fb.label ? fb.label : `Dia ${currentIndex}`;
   }
 
-  // 2) UI
   const elDia = document.getElementById("bibDiaLabel");
   const elRef = document.getElementById("bibRef");
   const elBookTitle = document.getElementById("bibBookTitle");
   const elFooterDia = document.getElementById("bibFooterDia");
 
-  if (elDia) elDia.textContent = labelTexto; // “Dia X”
+  if (elDia) elDia.textContent = labelTexto;
   if (elRef) elRef.textContent = refTexto;
   if (elBookTitle) elBookTitle.textContent = bibliaExtrairLivroCapitulo(refTexto);
   if (elFooterDia) elFooterDia.textContent = `Dia ${currentIndex}`;
 
   bibliaAnimarVirada();
 
-  // 3) status por doc v{index}
   pararBibliaListener();
   const docId = "v" + currentIndex;
   bibliaCurrentDocId = docId;
@@ -797,12 +805,10 @@ async function carregarBibliaAtual(viaListener = false) {
     if (elEu) elEu.textContent = euEmail ? `${euTxt} (${euEmail})` : euTxt;
     if (elEla) elEla.textContent = elaEmail ? `${elaTxt} (${elaEmail})` : elaTxt;
 
-    // selo dourado
     const seal = document.getElementById("bibGoldSeal");
     if (seal) seal.style.display = (euLido && elaLido) ? "inline-flex" : "none";
   });
 
-  // 4) garante ref/label no doc
   try {
     await bibliaLeiturasRef.doc(docId).set(
       { ref: refTexto, label: labelTexto, dayIndex: currentIndex },
@@ -870,7 +876,6 @@ async function bibliaAnterior() {
   }
 }
 
-// wrappers do onclick: aqui é onde o som toca (clique do usuário)
 function proximoVersiculoBiblia() {
   tocarSomVirarPagina();
   return bibliaProximo();
@@ -910,11 +915,459 @@ async function marcarLeituraBiblia(lido) {
 }
 
 /* =========================================================
+   💌 CARTINHAS (Para você) - COM APAGAR + ABA FAVORITAS
+========================================================= */
+
+function loveNome(role){
+  return role === "ash" ? "Ash" : "Deh";
+}
+
+// Regra: biblia_papel "eu" = Ash, "ela" = Deh
+function loveMeuRole(){
+  const papel = localStorage.getItem("biblia_papel");
+  if (papel === "ela") return "deh";
+  return "ash";
+}
+function loveOutroRole(){
+  return loveMeuRole() === "ash" ? "deh" : "ash";
+}
+
+function cartinhasPrepararDefaults(){
+  const me = loveMeuRole();
+  const other = loveOutroRole();
+
+  const selTo = document.getElementById("loveTo");
+  const meLabel = document.getElementById("loveMeLabel");
+
+  if (meLabel) meLabel.textContent = `Você: ${loveNome(me)}`;
+  if (selTo) selTo.value = other;
+
+  const whenSel = document.getElementById("loveWhen");
+  if (whenSel && !whenSel.value) whenSel.value = "now";
+
+  cartinhasTrocarModoData();
+}
+
+function cartinhasInitTela(){
+  const user = auth.currentUser;
+  if (!user) return;
+
+  cartinhasPrepararDefaults();
+  cartinhasAtivarListeners();
+
+  const aba = localStorage.getItem("love_aba") || "inbox";
+  cartinhasSetAba(aba);
+
+  cartinhasRenderListas();
+}
+
+function cartinhasTrocarModoData(){
+  const whenSel = document.getElementById("loveWhen");
+  const wrap = document.getElementById("loveDateWrap");
+  if (!whenSel || !wrap) return;
+  wrap.style.display = (whenSel.value === "date") ? "block" : "none";
+}
+
+function cartinhasPararListeners(){
+  if (unsubscribeLoveInbox) unsubscribeLoveInbox();
+  if (unsubscribeLoveSent) unsubscribeLoveSent();
+  unsubscribeLoveInbox = null;
+  unsubscribeLoveSent = null;
+  loveInbox = [];
+  loveSent = [];
+}
+
+// ✅ helper: ordenar sem depender de índice
+function tsToDate(ts){
+  if (!ts) return null;
+  if (typeof ts.toDate === "function") return ts.toDate();
+  if (ts instanceof Date) return ts;
+  return null;
+}
+function cartinhasSortKey(item){
+  const d = tsToDate(item?.createdAt);
+  return d ? d.getTime() : 0;
+}
+
+function cartinhasAtivarListeners(){
+  const user = auth.currentUser;
+  if (!user) return;
+  if (unsubscribeLoveInbox || unsubscribeLoveSent) return;
+
+  const me = loveMeuRole();
+
+  unsubscribeLoveInbox = cartinhasRef
+    .where("to", "==", me)
+    .onSnapshot(
+      snap => {
+        loveInbox = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+          .sort((a,b) => cartinhasSortKey(b) - cartinhasSortKey(a));
+        cartinhasRenderListas();
+      },
+      err => {
+        console.log("Erro listener inbox:", err);
+        const inboxEl = document.getElementById("loveInbox");
+        if (inboxEl) inboxEl.innerHTML = `<p style="margin:0; opacity:.75;">Erro ao carregar recebidas.</p>`;
+      }
+    );
+
+  unsubscribeLoveSent = cartinhasRef
+    .where("from", "==", me)
+    .onSnapshot(
+      snap => {
+        loveSent = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+          .sort((a,b) => cartinhasSortKey(b) - cartinhasSortKey(a));
+        cartinhasRenderListas();
+      },
+      err => {
+        console.log("Erro listener enviadas:", err);
+        const sentEl = document.getElementById("loveSent");
+        if (sentEl) sentEl.innerHTML = `<p style="margin:0; opacity:.75;">Erro ao carregar enviadas.</p>`;
+      }
+    );
+}
+
+function fmtDateTime(d){
+  if (!d) return "—";
+  const dd = String(d.getDate()).padStart(2,"0");
+  const mm = String(d.getMonth()+1).padStart(2,"0");
+  const yy = d.getFullYear();
+  const hh = String(d.getHours()).padStart(2,"0");
+  const mi = String(d.getMinutes()).padStart(2,"0");
+  return `${dd}/${mm}/${yy} ${hh}:${mi}`;
+}
+
+function fmtDateOnly(d){
+  if (!d) return "—";
+  const dd = String(d.getDate()).padStart(2,"0");
+  const mm = String(d.getMonth()+1).padStart(2,"0");
+  const yy = d.getFullYear();
+  return `${dd}/${mm}/${yy}`;
+}
+
+function cartinhaPodeAbrir(item){
+  const openAt = tsToDate(item.openAt);
+  if (!openAt) return true;
+  return Date.now() >= openAt.getTime();
+}
+
+function cartinhaPreview(texto){
+  const t = String(texto || "").trim();
+  if (!t) return "—";
+  return t.length > 120 ? (t.slice(0, 120) + "…") : t;
+}
+
+function cartinhasGetFavoritas(){
+  const all = []
+    .concat(Array.isArray(loveInbox) ? loveInbox : [])
+    .concat(Array.isArray(loveSent) ? loveSent : []);
+
+  const map = new Map();
+  for (const it of all) {
+    if (!it || !it.id) continue;
+    map.set(it.id, it);
+  }
+
+  const uniq = Array.from(map.values());
+  return uniq
+    .filter(it => !!it.isFav)
+    .sort((a,b) => cartinhasSortKey(b) - cartinhasSortKey(a));
+}
+
+function cartinhasRenderListas(){
+  const inboxEl = document.getElementById("loveInbox");
+  const sentEl = document.getElementById("loveSent");
+  const favEl = document.getElementById("loveFav");
+  if (!inboxEl || !sentEl || !favEl) return;
+
+  // RECEBIDAS
+  if (!Array.isArray(loveInbox) || loveInbox.length === 0){
+    inboxEl.innerHTML = `<p style="margin:0; opacity:.75;">Nenhuma cartinha recebida ainda 💜</p>`;
+  } else {
+    inboxEl.innerHTML = loveInbox.map(item => cartinhasCardHTML(item, true)).join("");
+  }
+
+  // ENVIADAS
+  if (!Array.isArray(loveSent) || loveSent.length === 0){
+    sentEl.innerHTML = `<p style="margin:0; opacity:.75;">Nenhuma cartinha enviada ainda 💌</p>`;
+  } else {
+    sentEl.innerHTML = loveSent.map(item => cartinhasCardHTML(item, false)).join("");
+  }
+
+  // ⭐ FAVORITAS
+  const favs = cartinhasGetFavoritas();
+  if (!Array.isArray(favs) || favs.length === 0){
+    favEl.innerHTML = `<p style="margin:0; opacity:.75;">Nenhuma favorita ainda ⭐ (aperte na estrela em uma cartinha)</p>`;
+  } else {
+    favEl.innerHTML = favs.map(item => {
+      const isInbox = (item.to === loveMeuRole());
+      return cartinhasCardHTML(item, isInbox, true);
+    }).join("");
+  }
+}
+
+function cartinhasCardHTML(item, isInbox, isFavTab = false){
+  const me = loveMeuRole();
+
+  const from = item.from || "—";
+  const to = item.to || "—";
+  const fromName = loveNome(from);
+  const toName = loveNome(to);
+
+  const createdAt = fmtDateTime(tsToDate(item.createdAt));
+  const openAtDate = tsToDate(item.openAt);
+  const locked = !cartinhaPodeAbrir(item);
+
+  const read = !!item.isRead;
+  const fav = !!item.isFav;
+
+  const badge = `De <strong>${fromName}</strong> para <strong>${toName}</strong>`;
+
+  const lockLine = locked
+    ? `🔒 Trancada — abre em <strong>${fmtDateOnly(openAtDate)}</strong>`
+    : `✅ Pode abrir`;
+
+  const dotClass = read ? "loveReadDot read" : "loveReadDot";
+
+  const mainBtn = isInbox
+    ? (locked
+      ? `<button class="loveBtnGhost" disabled title="Ainda não pode abrir">🔒 Trancada</button>`
+      : `<button onclick="cartinhasAbrir('${item.id}')" title="Abrir">💌 Abrir</button>`)
+    : (locked
+      ? `<button class="loveBtnGhost" disabled title="A outra pessoa ainda não pode abrir">🔒 Trancada</button>`
+      : `<button class="loveBtnGhost" disabled title="Já pode abrir do lado dela/dele">✅ Liberada</button>`);
+
+  const starBtn = `<button class="${fav ? "loveStar" : "loveBtnGhost"}" onclick="cartinhasToggleFav('${item.id}')" title="${fav ? "Desfavoritar" : "Favoritar"}">⭐</button>`;
+
+  const podeApagar = (!isInbox && item.from === me);
+  const deleteBtn = podeApagar
+    ? `<button class="loveDanger" onclick="cartinhasExcluir('${item.id}')" title="Apagar">🗑️</button>`
+    : "";
+
+  return `
+    <div class="loveCard ${isFavTab ? "loveCardFav" : ""}">
+      <div class="loveTop">
+        <div class="loveMeta">
+          <span class="${dotClass}" title="${read ? "Lida" : "Não lida"}"></span>
+          <span class="loveBadge">${badge}</span>
+          <span class="loveBadge loveLock">${lockLine}</span>
+        </div>
+        <div class="loveMeta">
+          ${starBtn}
+          ${deleteBtn}
+        </div>
+      </div>
+
+      <div class="loveSub">
+        <div style="opacity:.9;">${locked && isInbox ? "Conteúdo oculto até liberar 💜" : cartinhaPreview(item.texto)}</div>
+        <div style="margin-top:6px; opacity:.7;">Enviada em ${createdAt}</div>
+      </div>
+
+      <div class="loveActions">
+        ${mainBtn}
+      </div>
+    </div>
+  `;
+}
+
+function cartinhasGetItemById(id){
+  let item = loveInbox.find(x => x.id === id);
+  if (item) return item;
+  item = loveSent.find(x => x.id === id);
+  return item || null;
+}
+
+async function cartinhasAbrir(id){
+  const user = auth.currentUser;
+  if (!user) return alert("Faça login.");
+
+  const item = cartinhasGetItemById(id);
+  if (!item) return alert("Cartinha não encontrada.");
+
+  if (!cartinhaPodeAbrir(item)){
+    const openAt = tsToDate(item.openAt);
+    alert(`Essa cartinha ainda está trancada.\nAbre em: ${fmtDateOnly(openAt)}`);
+    return;
+  }
+
+  // marca como lida (somente se for recebida)
+  const me = loveMeuRole();
+  if (item.to === me) {
+    try {
+      await cartinhasRef.doc(id).set({
+        isRead: true,
+        openedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+    } catch (e) {}
+  }
+
+  cartinhasAbrirModal(item);
+}
+
+function cartinhasAbrirModal(item){
+  const modal = document.getElementById("loveModal");
+  const title = document.getElementById("loveModalTitle");
+  const meta = document.getElementById("loveModalMeta");
+  const body = document.getElementById("loveModalBody");
+  if (!modal || !title || !meta || !body) return;
+
+  const fromName = loveNome(item.from || "");
+  const toName = loveNome(item.to || "");
+  const createdAt = fmtDateTime(tsToDate(item.createdAt));
+  const openedAt = tsToDate(item.openedAt);
+
+  title.textContent = "💌 Cartinha";
+  meta.textContent = `De ${fromName} → ${toName} • enviada em ${createdAt}` + (openedAt ? ` • aberta em ${fmtDateTime(openedAt)}` : "");
+  body.textContent = String(item.texto || "—");
+
+  modal.style.display = "grid";
+}
+
+function cartinhasFecharModal(){
+  const modal = document.getElementById("loveModal");
+  if (modal) modal.style.display = "none";
+}
+
+async function cartinhasToggleFav(id){
+  const user = auth.currentUser;
+  if (!user) return alert("Faça login.");
+
+  const item = cartinhasGetItemById(id) || cartinhasGetFavoritas().find(x => x.id === id);
+  if (!item) return;
+
+  try {
+    await cartinhasRef.doc(id).set({ isFav: !item.isFav }, { merge: true });
+  } catch (e) {
+    alert("Não consegui favoritar agora.");
+  }
+}
+
+async function cartinhasExcluir(id){
+  const user = auth.currentUser;
+  if (!user) return alert("Faça login.");
+
+  const me = loveMeuRole();
+  const item = cartinhasGetItemById(id) || cartinhasGetFavoritas().find(x => x.id === id);
+  if (!item) return alert("Cartinha não encontrada.");
+
+  // segurança: só apaga se foi você quem enviou
+  if (item.from !== me) {
+    alert("Você só pode apagar as cartinhas que VOCÊ enviou.");
+    return;
+  }
+
+  const ok = confirm("Tem certeza que quer APAGAR essa cartinha? Isso não tem como desfazer.");
+  if (!ok) return;
+
+  try {
+    await cartinhasRef.doc(id).delete();
+  } catch (e) {
+    alert("Erro ao apagar: " + (e.message || e));
+  }
+}
+
+function cartinhasOpenAtFromUI(){
+  const whenSel = document.getElementById("loveWhen");
+  const dateInp = document.getElementById("loveDate");
+  const mode = whenSel ? whenSel.value : "now";
+
+  const now = new Date();
+
+  if (mode === "now") {
+    return firebase.firestore.Timestamp.fromDate(now);
+  }
+
+  if (mode === "tomorrow") {
+    // amanhã às 08:00
+    const d = new Date(now);
+    d.setDate(d.getDate() + 1);
+    d.setHours(8, 0, 0, 0);
+    return firebase.firestore.Timestamp.fromDate(d);
+  }
+
+  // date
+  const v = (dateInp ? dateInp.value : "").trim();
+  if (!v) return null;
+  const d = new Date(v + "T08:00:00");
+  if (Number.isNaN(d.getTime())) return null;
+  return firebase.firestore.Timestamp.fromDate(d);
+}
+
+async function cartinhasEnviar(){
+  const user = auth.currentUser;
+  if (!user) return alert("Faça login.");
+
+  cartinhasPrepararDefaults();
+
+  const me = loveMeuRole();
+  const toSel = document.getElementById("loveTo");
+  const textEl = document.getElementById("loveText");
+
+  const to = (toSel ? String(toSel.value) : loveOutroRole()).trim();
+  const texto = (textEl ? String(textEl.value) : "").trim();
+
+  if (!texto) return alert("Escreve uma mensagem primeiro 💜");
+  if (to !== "ash" && to !== "deh") return alert("Destinatário inválido.");
+  if (to === me) return alert("Escolhe o outro (não dá pra mandar pra você mesmo 😄)");
+
+  const openAt = cartinhasOpenAtFromUI();
+  if (!openAt) return alert("Escolha uma data válida pra abrir.");
+
+  try {
+    await cartinhasRef.add({
+      from: me,
+      to,
+      texto,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      openAt,
+      openedAt: null,
+      isRead: false,
+      isFav: false,
+      fromEmail: user.email || ""
+    });
+
+    if (textEl) textEl.value = "";
+    alert("💌 Cartinha enviada!");
+
+    // opcional: após enviar, levar pra aba enviadas
+    cartinhasSetAba("sent");
+  } catch (e) {
+    alert("Erro ao enviar cartinha: " + (e.message || e));
+  }
+}
+
+// ✅ ABAS
+function cartinhasSetAba(aba){
+  const sInbox = document.getElementById("loveSectionInbox");
+  const sSent = document.getElementById("loveSectionSent");
+  const sFav = document.getElementById("loveSectionFav");
+
+  const tInbox = document.getElementById("loveTabInbox");
+  const tSent = document.getElementById("loveTabSent");
+  const tFav = document.getElementById("loveTabFav");
+
+  if (!sInbox || !sSent || !sFav || !tInbox || !tSent || !tFav) return;
+
+  sInbox.style.display = (aba === "inbox") ? "block" : "none";
+  sSent.style.display = (aba === "sent") ? "block" : "none";
+  sFav.style.display = (aba === "fav") ? "block" : "none";
+
+  tInbox.classList.toggle("active", aba === "inbox");
+  tSent.classList.toggle("active", aba === "sent");
+  tFav.classList.toggle("active", aba === "fav");
+
+  localStorage.setItem("love_aba", aba);
+
+  // garante render da fav quando abrir a aba
+  if (aba === "fav") cartinhasRenderListas();
+}
+
+/* =========================================================
    JOGO DA VELHA (Tempo real com Firestore) - mantido
 ========================================================= */
 
 let tttRoomId = localStorage.getItem("ttt_roomId") || "";
-let tttPlayer = localStorage.getItem("ttt_player") || ""; // "X" / "O"
+let tttPlayer = localStorage.getItem("ttt_player") || "";
 let tttUnsub = null;
 let tttState = null;
 
@@ -928,14 +1381,8 @@ function tttAutoRetomar() {
   });
 }
 
-function tttGetEl(id) {
-  return document.getElementById(id);
-}
-
-function tttSetText(id, txt) {
-  const el = tttGetEl(id);
-  if (el) el.textContent = txt;
-}
+function tttGetEl(id) { return document.getElementById(id); }
+function tttSetText(id, txt) { const el = tttGetEl(id); if (el) el.textContent = txt; }
 
 function tttRender() {
   const inp = tttGetEl("tttRoomId");
@@ -990,9 +1437,7 @@ function tttRender() {
   }
 }
 
-function tttGerarIdCurto() {
-  return Math.random().toString(36).slice(2, 8).toUpperCase();
-}
+function tttGerarIdCurto() { return Math.random().toString(36).slice(2, 8).toUpperCase(); }
 
 async function tttCriarSala() {
   const user = auth.currentUser;
@@ -1218,6 +1663,15 @@ window.marcarLeituraBiblia = marcarLeituraBiblia;
 window.proximoVersiculoBiblia = proximoVersiculoBiblia;
 window.anteriorVersiculoBiblia = anteriorVersiculoBiblia;
 window.toggleSomBiblia = toggleSomBiblia;
+
+// Cartinhas 💌
+window.cartinhasTrocarModoData = cartinhasTrocarModoData;
+window.cartinhasEnviar = cartinhasEnviar;
+window.cartinhasAbrir = cartinhasAbrir;
+window.cartinhasFecharModal = cartinhasFecharModal;
+window.cartinhasToggleFav = cartinhasToggleFav;
+window.cartinhasExcluir = cartinhasExcluir;
+window.cartinhasSetAba = cartinhasSetAba;
 
 // Jogo da velha
 window.tttCriarSala = tttCriarSala;
