@@ -86,7 +86,7 @@
             <div class="btnMenuIcon">🎬</div>
             <div class="btnMenuTexto">
               <strong>Cinema</strong>
-              <span>Assistir juntos com sala</span>
+              <span>Filmes + séries, sorteio e nota</span>
             </div>
           </button>
         </div>
@@ -149,7 +149,7 @@
     </div>
 
     <!-- =====================
-         TELA BÍBLIA (CONCEITO 1 - PÁGINA DE LIVRO)
+         TELA BÍBLIA
     ====================== -->
     <div id="telaBiblia" class="tela" style="display:none;">
 
@@ -163,7 +163,6 @@
         <div class="biblePaper" id="biblePaper">
           <div class="bibleBookmark" aria-hidden="true"></div>
 
-          <!-- selo dourado quando os dois leram -->
           <div class="bibleGoldSeal" id="bibGoldSeal" style="display:none;">
             🏅 Leitura completa (os dois)
           </div>
@@ -199,7 +198,6 @@
               <button class="biblePrimaryInk" onclick="marcarLeituraBiblia(true)">✍️ Assinar leitura</button>
               <button class="bibleSecondaryInk" onclick="marcarLeituraBiblia(false)">↩️ Remover assinatura</button>
 
-              <!-- ✅ SOM DA PÁGINA -->
               <button class="bibleSoundBtn" id="bibSoundBtn" onclick="toggleSomBiblia()">🔊 Som: ON</button>
             </div>
 
@@ -224,7 +222,6 @@
             </div>
           </div>
 
-          <!-- rodapé com "Dia X" -->
           <div class="bibleFooterNote">
             <span class="bibleFooterDot">•</span>
             <span id="bibFooterDia">Dia —</span>
@@ -252,7 +249,6 @@
         </p>
       </section>
 
-      <!-- ESCREVER -->
       <section class="loveCompose">
         <h2>Escrever cartinha</h2>
 
@@ -292,41 +288,20 @@
         </div>
       </section>
 
-      <!-- ✅ ABAS -->
-      <section class="loveTabsWrap">
-        <div class="loveTabs">
-          <button id="loveTabInbox" class="loveTab" onclick="cartinhasSetAba('inbox')">📥 Recebidas</button>
-          <button id="loveTabSent" class="loveTab" onclick="cartinhasSetAba('sent')">📤 Enviadas</button>
-          <button id="loveTabFav" class="loveTab" onclick="cartinhasSetAba('fav')">⭐ Favoritas</button>
-        </div>
-        <p class="loveTabsHint">Dica: clique na ⭐ para favoritar. Em “Enviadas” dá pra apagar 🗑️</p>
-      </section>
-
-      <!-- RECEBIDAS -->
-      <section id="loveSectionInbox">
+      <section>
         <h2>Recebidas</h2>
         <div id="loveInbox" class="loveList">
           <p style="margin:0; opacity:.75;">Carregando…</p>
         </div>
       </section>
 
-      <!-- ENVIADAS -->
-      <section id="loveSectionSent" style="display:none;">
+      <section>
         <h2>Enviadas</h2>
         <div id="loveSent" class="loveList">
           <p style="margin:0; opacity:.75;">Carregando…</p>
         </div>
       </section>
 
-      <!-- ⭐ FAVORITAS -->
-      <section id="loveSectionFav" style="display:none;">
-        <h2>⭐ Favoritas</h2>
-        <div id="loveFav" class="loveList">
-          <p style="margin:0; opacity:.75;">Carregando…</p>
-        </div>
-      </section>
-
-      <!-- MODAL DE LEITURA -->
       <div id="loveModal" class="loveModal" style="display:none;" role="dialog" aria-modal="true">
         <div class="loveModalBackdrop" onclick="cartinhasFecharModal()"></div>
         <div class="loveModalCard">
@@ -362,12 +337,157 @@
          TELA CINEMA
     ====================== -->
     <div id="telaCinema" class="tela" style="display:none;">
-      <section>
-        <h2>🎬 Cinema</h2>
-        <p style="margin:0; opacity:.85;">
-          Em breve: sala com sincronização e chat 💜
-        </p>
+
+      <section class="cardVoltar">
+        <button class="btnVoltar" onclick="irPara('home')">⬅️ Voltar</button>
       </section>
+
+      <section class="cinemaHero">
+        <h2>🎬 Cinema do casal</h2>
+        <p style="margin:0; opacity:.85;">
+          Filmes e séries pra vocês escolherem juntos: lista, favoritos, sorteio, nota e progresso de episódios 💜
+        </p>
+
+        <div class="cinemaStats">
+          <div class="cinemaStat">
+            <div class="cinemaStatNum" id="cinemaCountTodo">0</div>
+            <div class="cinemaStatLabel">Quero ver</div>
+          </div>
+          <div class="cinemaStat">
+            <div class="cinemaStatNum" id="cinemaCountWatched">0</div>
+            <div class="cinemaStatLabel">Vistos</div>
+          </div>
+          <div class="cinemaStat">
+            <div class="cinemaStatNum" id="cinemaCountFav">0</div>
+            <div class="cinemaStatLabel">Favoritos</div>
+          </div>
+        </div>
+
+        <div class="cinemaLast" id="cinemaLastLine" style="opacity:.78; font-size:13px; margin-top:10px;">
+          Último visto: —
+        </div>
+      </section>
+
+      <section class="cinemaCompose">
+        <h2>Adicionar na lista</h2>
+
+        <div class="cinemaGrid">
+          <div class="cinemaField">
+            <label for="cinemaTitle">Título</label>
+            <input id="cinemaTitle" type="text" placeholder="Ex: Stranger Things / Interestelar…" />
+            <small class="cinemaHint">Dica: pode ser filme ou série.</small>
+          </div>
+
+          <div class="cinemaField">
+            <label for="cinemaType">Tipo</label>
+            <select id="cinemaType" onchange="cinemaOnTypeChange()">
+              <option value="movie">Filme</option>
+              <option value="series">Série</option>
+            </select>
+            <small class="cinemaHint">Pra organizar melhor 💜</small>
+          </div>
+
+          <div class="cinemaField">
+            <label for="cinemaPlatform">Onde assistir</label>
+            <select id="cinemaPlatform">
+              <option value="netflix">Netflix</option>
+              <option value="prime">Prime Video</option>
+              <option value="disney">Disney+</option>
+              <option value="max">Max</option>
+              <option value="globoplay">Globoplay</option>
+              <option value="youtube">YouTube</option>
+              <option value="cinema">Cinema</option>
+              <option value="outro">Outro</option>
+            </select>
+            <small class="cinemaHint">Vocês podem mudar depois (se quiser eu adiciono edição também).</small>
+          </div>
+
+          <div class="cinemaField">
+            <label>Banner (URL)</label>
+            <input id="cinemaBannerUrl" type="text" placeholder="https://... (opcional)" />
+            <small class="cinemaHint">Cole o link de uma imagem do banner/poster (fica lindo no card).</small>
+          </div>
+
+          <!-- CAMPOS SÉRIE -->
+          <div class="cinemaField" id="cinemaSeriesSeasonsWrap" style="display:none;">
+            <label for="cinemaSeasonsCount">Temporadas</label>
+            <input id="cinemaSeasonsCount" type="number" min="1" max="60" placeholder="Ex: 4" />
+            <small class="cinemaHint">Quantidade total de temporadas.</small>
+          </div>
+
+          <div class="cinemaField" id="cinemaSeriesEpsWrap" style="display:none;">
+            <label for="cinemaEpisodesPerSeason">Episódios por temporada</label>
+            <input id="cinemaEpisodesPerSeason" type="number" min="1" max="60" placeholder="Ex: 10" />
+            <small class="cinemaHint">Mesmo número pra todas as temporadas (dá pra ajustar depois se quiser).</small>
+          </div>
+
+          <div class="cinemaField">
+            <label>Sugerido por</label>
+            <div class="cinemaPill" id="cinemaMeLabel">Você: —</div>
+            <small class="cinemaHint">Automaticamente pelo aparelho (Ash/Deh).</small>
+          </div>
+        </div>
+
+        <div class="cinemaRow">
+          <button class="cinemaAddBtn" onclick="cinemaAdd()">➕ Adicionar</button>
+        </div>
+      </section>
+
+      <section class="cinemaRandom">
+        <h2>Sorteio</h2>
+        <div class="cinemaRandomRow">
+          <button class="cinemaDiceBtn" onclick="cinemaPickRandom()">🎲 Sortear da lista</button>
+          <button class="cinemaGhostBtn" onclick="cinemaClearRandom()">🧹 Limpar</button>
+        </div>
+
+        <div id="cinemaRandomResult" class="cinemaRandomResult">
+          <p style="margin:0; opacity:.75;">Clique em “Sortear” pra escolher um filme/série da lista 💜</p>
+        </div>
+      </section>
+
+      <section class="cinemaBoard">
+        <h2>Minha lista</h2>
+
+        <div class="cinemaTabs">
+          <button id="cinemaTabTodo" class="cinemaTab active" onclick="cinemaSetTab('todo')">📌 Quero ver</button>
+          <button id="cinemaTabWatched" class="cinemaTab" onclick="cinemaSetTab('watched')">✅ Vistos</button>
+          <button id="cinemaTabFav" class="cinemaTab" onclick="cinemaSetTab('fav')">⭐ Favoritos</button>
+        </div>
+
+        <div id="cinemaList" class="cinemaList">
+          <p style="margin:0; opacity:.75;">Carregando…</p>
+        </div>
+      </section>
+
+      <!-- MODAL DE PROGRESSO DE SÉRIE -->
+      <div id="cinemaSeriesModal" class="cinemaModal" style="display:none;" role="dialog" aria-modal="true">
+        <div class="cinemaModalBackdrop" onclick="cinemaCloseSeries()"></div>
+
+        <div class="cinemaModalCard">
+          <div class="cinemaModalTop">
+            <div>
+              <strong id="cinemaModalTitle">📺 Série</strong>
+              <div id="cinemaModalSub" class="cinemaModalSub">—</div>
+            </div>
+            <button class="cinemaModalClose" onclick="cinemaCloseSeries()">✖</button>
+          </div>
+
+          <div id="cinemaModalBanner" class="cinemaModalBanner"></div>
+
+          <div class="cinemaModalInfo">
+            <div class="cinemaModalNext" id="cinemaModalNext">Próximo: —</div>
+            <div class="cinemaModalBtns">
+              <button class="cinemaGhostBtn" onclick="cinemaMarkNextEpisodeFromModal()">⏭️ Próximo ep</button>
+              <button class="cinemaGhostBtn" onclick="cinemaCloseSeries()">Fechar</button>
+            </div>
+          </div>
+
+          <div id="cinemaModalBody" class="cinemaModalBody">
+            <p style="margin:0; opacity:.75;">Carregando…</p>
+          </div>
+        </div>
+      </div>
+
     </div>
 
   </div>

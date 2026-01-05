@@ -906,82 +906,308 @@ strong { font-size: 18px; }
 }
 
 /* =========================================================
-   ✅ NOVO: ABAS + FAVORITAS + BOTÃO APAGAR (SEM ALTERAR O RESTO)
+   🎬 CINEMA (Filmes + Séries + Nota + Favoritos + Sorteio)
+   (ADICIONADO NO FINAL - sem alterar o resto)
 ========================================================= */
 
-/* Abas */
-.loveTabsWrap{
-  background: transparent;
-  box-shadow: none;
-  padding: 0;
-  margin-top: -6px;
+.cinemaHero{
+  border: 1px solid rgba(0,0,0,0.06);
+  background:
+    radial-gradient(700px 260px at 10% 0%, rgba(255,255,255,0.55), transparent 55%),
+    radial-gradient(700px 260px at 90% 10%, rgba(255,255,255,0.35), transparent 60%),
+    var(--cor-fundo-card);
 }
 
-.loveTabs{
+.cinemaStats{
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.cinemaStat{
+  background: var(--cor-fundo-item);
+  border: 1px solid rgba(0,0,0,0.06);
+  border-radius: 14px;
+  padding: 10px;
+  text-align: center;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.08);
+}
+
+.cinemaStatNum{
+  font-size: 22px;
+  font-weight: 900;
+}
+
+.cinemaStatLabel{
+  font-size: 12.5px;
+  opacity: .75;
+  margin-top: 4px;
+}
+
+.cinemaCompose .cinemaGrid{
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.cinemaField label{
+  display: block;
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+
+.cinemaField input,
+.cinemaField select{
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid rgba(0,0,0,0.12);
+  background: #fff;
+  padding: 12px;
+  outline: none;
+  transition: .2s;
+  font-size: 15px;
+}
+
+.cinemaField input:focus,
+.cinemaField select:focus{
+  border-color: var(--cor-primaria);
+  box-shadow: 0 0 0 3px rgba(102,126,234,0.18);
+}
+
+.cinemaHint{
+  display: block;
+  margin-top: 6px;
+  font-size: 12.5px;
+  opacity: .75;
+  line-height: 1.3;
+}
+
+.cinemaPill{
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 999px;
+  background: rgba(102,126,234,0.12);
+  border: 1px solid rgba(0,0,0,0.08);
+  font-weight: 900;
+  width: fit-content;
+}
+
+.cinemaRow{
+  margin-top: 10px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.cinemaAddBtn{
+  background: linear-gradient(135deg, rgba(255,111,167,0.95), rgba(118,75,162,0.92));
+}
+
+.cinemaRandomRow{
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
 }
 
-.loveTab{
-  margin-left: 0;
-  border-radius: 999px;
-  background: rgba(255,255,255,0.22);
-  border: 1px solid rgba(255,255,255,0.35);
-  color: var(--cor-texto-claro);
+.cinemaDiceBtn{
+  background: linear-gradient(135deg, rgba(102,126,234,0.95), rgba(118,75,162,0.92));
 }
 
-.loveTab:hover{
-  background: rgba(255,255,255,0.32);
-}
-
-.loveTab.active{
-  background: rgba(255,255,255,0.38);
-  border-color: rgba(255,255,255,0.45);
-}
-
-.loveTabsHint{
-  margin: 10px 0 0 0;
-  font-size: 12.5px;
-  opacity: .85;
-  color: rgba(255,255,255,0.92);
-}
-
-/* Destaque visual no card quando estiver na aba Favoritas */
-.loveCardFav{
-  border-color: rgba(255,111,167,0.35);
-  box-shadow: 0 12px 26px rgba(0,0,0,0.10);
-}
-
-/* Botão apagar */
-.loveDanger{
-  background: rgba(255,0,0,0.12);
+.cinemaGhostBtn{
+  background: rgba(0,0,0,0.06);
   color: #1f1f2d;
   border: 1px solid rgba(0,0,0,0.10);
 }
-.loveDanger:hover{
-  background: rgba(255,0,0,0.18);
+.cinemaGhostBtn:hover{ background: rgba(0,0,0,0.10); }
+
+.cinemaDangerBtn{
+  background: rgba(255, 50, 90, 0.12);
+  color: #5a0012;
+  border: 1px solid rgba(0,0,0,0.10);
+}
+.cinemaDangerBtn:hover{ background: rgba(255, 50, 90, 0.18); }
+
+.cinemaStar{
+  background: rgba(255, 215, 0, 0.18);
+  color: #3b2b00;
+  border: 1px solid rgba(0,0,0,0.10);
 }
 
-@media (prefers-color-scheme: dark){
-  .loveTab{
-    background: rgba(255,255,255,0.10);
-    border-color: rgba(255,255,255,0.18);
+.cinemaRandomResult{
+  margin-top: 10px;
+  display: grid;
+  gap: 10px;
+}
+
+.cinemaPickCard{
+  border-radius: 14px;
+  padding: 12px;
+  background: var(--cor-fundo-item);
+  border: 1px solid rgba(0,0,0,0.06);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.08);
+}
+
+.cinemaPickTitle{
+  display: block;
+  font-size: 16px;
+}
+
+.cinemaPickBadges{
+  margin-top: 8px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.cinemaPickActions{
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.cinemaPickActions button{ margin-left: 0; }
+
+.cinemaTabs{
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.cinemaTab{
+  margin-left: 0;
+  background: rgba(0,0,0,0.06);
+  color: #1f1f2d;
+  border: 1px solid rgba(0,0,0,0.10);
+}
+.cinemaTab:hover{ background: rgba(0,0,0,0.10); }
+
+.cinemaTab.active{
+  background: rgba(102,126,234,0.20);
+  border-color: rgba(0,0,0,0.10);
+  color: #1f1f2d;
+}
+
+.cinemaList{
+  margin-top: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.cinemaCard{
+  border-radius: 14px;
+  padding: 12px;
+  background: var(--cor-fundo-item);
+  border: 1px solid rgba(0,0,0,0.06);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.08);
+}
+
+.cinemaTop{
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.cinemaTitle{
+  font-weight: 900;
+  font-size: 16px;
+}
+
+.cinemaTopActions{
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.cinemaTopActions button{ margin-left: 0; }
+
+.cinemaBadges{
+  margin-top: 8px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.cinemaBadge{
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(102,126,234,0.12);
+  border: 1px solid rgba(0,0,0,0.08);
+  font-weight: 900;
+  font-size: 12.5px;
+}
+
+.cinemaBadgeSoft{
+  background: rgba(0,0,0,0.05);
+  border: 1px solid rgba(0,0,0,0.10);
+}
+
+.cinemaBadgeGold{
+  background: rgba(255, 215, 0, 0.18);
+  color: #3b2b00;
+  border: 1px solid rgba(0,0,0,0.10);
+}
+
+.cinemaActions{
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.cinemaActions button{ margin-left: 0; }
+
+@media (max-width: 700px){
+  .cinemaCompose .cinemaGrid{
+    grid-template-columns: 1fr;
+  }
+  .cinemaStats{
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .cinemaField input,
+  .cinemaField select{
+    background: rgba(255,255,255,0.06);
     color: #eee;
+    border-color: rgba(255,255,255,0.14);
   }
-  .loveTab:hover{
-    background: rgba(255,255,255,0.14);
+
+  .cinemaCard,
+  .cinemaPickCard,
+  .cinemaStat{
+    border-color: rgba(255,255,255,0.10);
+    box-shadow: 0 12px 26px rgba(0,0,0,0.22);
   }
-  .loveTab.active{
-    background: rgba(255,255,255,0.18);
-    border-color: rgba(255,255,255,0.22);
-  }
-  .loveTabsHint{
-    color: rgba(255,255,255,0.88);
-  }
-  .loveDanger{
+
+  .cinemaGhostBtn,
+  .cinemaTab{
     color: #eee;
-    background: rgba(255,0,0,0.18);
+    background: rgba(255,255,255,0.06);
+    border-color: rgba(255,255,255,0.14);
+  }
+
+  .cinemaTab.active{
+    background: rgba(102,126,234,0.25);
+    color: #eee;
+    border-color: rgba(255,255,255,0.14);
+  }
+
+  .cinemaBadgeSoft{
+    color: #eee;
+    background: rgba(255,255,255,0.06);
+    border-color: rgba(255,255,255,0.14);
+  }
+
+  .cinemaDangerBtn{
+    color: #ffd6df;
+    background: rgba(255, 50, 90, 0.16);
     border-color: rgba(255,255,255,0.14);
   }
 }
