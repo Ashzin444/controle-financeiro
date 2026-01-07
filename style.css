@@ -1211,3 +1211,311 @@ strong { font-size: 18px; }
     border-color: rgba(255,255,255,0.14);
   }
 }
+
+/* =========================================================
+   ✅ NOVO: SÉRIES COM BANNER + CHECKLIST EP/TEMPORADA
+========================================================= */
+
+.cinemaBanner{
+  margin: -12px -12px 10px -12px;
+  border-radius: 14px 14px 12px 12px;
+  overflow: hidden;
+  height: 150px;
+  position: relative;
+  background:
+    radial-gradient(900px 280px at 20% 0%, rgba(255,255,255,0.45), transparent 60%),
+    linear-gradient(135deg, rgba(102,126,234,0.55), rgba(118,75,162,0.55));
+  border: 1px solid rgba(0,0,0,0.06);
+}
+
+.cinemaBanner img{
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transform: scale(1.02);
+}
+
+.cinemaBannerOverlay{
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0,0,0,0.05), rgba(0,0,0,0.60));
+  pointer-events: none;
+}
+
+.cinemaBannerTitle{
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 10px;
+  z-index: 2;
+  color: #fff;
+  font-weight: 900;
+  letter-spacing: .2px;
+  text-shadow: 0 10px 26px rgba(0,0,0,0.35);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.cinemaBannerMini{
+  font-size: 12.5px;
+  opacity: .92;
+  font-weight: 800;
+  background: rgba(0,0,0,0.22);
+  border: 1px solid rgba(255,255,255,0.22);
+  padding: 6px 10px;
+  border-radius: 999px;
+}
+
+.cinemaSeriesBox{
+  margin-top: 10px;
+  display: grid;
+  gap: 10px;
+}
+
+.cinemaSeriesLine{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.cinemaSeriesProgress{
+  font-size: 13px;
+  opacity: .85;
+}
+
+.cinemaSeriesSmallBtns{
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.cinemaSeriesSmallBtns button{ margin-left: 0; }
+
+.cinemaSeriesChecklist{
+  padding: 10px;
+  border-radius: 14px;
+  border: 1px dashed rgba(0,0,0,0.16);
+  background: rgba(0,0,0,0.03);
+  display: grid;
+  gap: 10px;
+}
+
+.cinemaSeasonCard{
+  background: rgba(255,255,255,0.55);
+  border: 1px solid rgba(0,0,0,0.06);
+  border-radius: 14px;
+  padding: 10px;
+}
+
+.cinemaSeasonTop{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.cinemaSeasonTitle{
+  font-weight: 900;
+}
+
+.cinemaSeasonMeta{
+  font-size: 12.5px;
+  opacity: .78;
+}
+
+.cinemaSeasonActions{
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+.cinemaSeasonActions button{ margin-left: 0; }
+
+.cinemaEpisodeGrid{
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.cinemaEp{
+  min-height: 34px;
+  padding: 6px 0;
+  margin-left: 0;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 900;
+  background: rgba(0,0,0,0.06);
+  color: #1f1f2d;
+  border: 1px solid rgba(0,0,0,0.10);
+}
+.cinemaEp:hover{ background: rgba(0,0,0,0.10); }
+
+.cinemaEp.seen{
+  background: rgba(102,126,234,0.22);
+  border-color: rgba(0,0,0,0.10);
+}
+
+@media (max-width: 700px){
+  .cinemaBanner{ height: 130px; }
+  .cinemaEpisodeGrid{ grid-template-columns: repeat(8, minmax(0, 1fr)); }
+}
+
+@media (max-width: 420px){
+  .cinemaEpisodeGrid{ grid-template-columns: repeat(6, minmax(0, 1fr)); }
+}
+
+@media (prefers-color-scheme: dark){
+  .cinemaBanner{
+    border-color: rgba(255,255,255,0.12);
+  }
+  .cinemaSeriesChecklist{
+    border-color: rgba(255,255,255,0.16);
+    background: rgba(255,255,255,0.06);
+  }
+  .cinemaSeasonCard{
+    background: rgba(255,255,255,0.06);
+    border-color: rgba(255,255,255,0.12);
+  }
+  .cinemaEp{
+    color: #eee;
+    background: rgba(255,255,255,0.06);
+    border-color: rgba(255,255,255,0.14);
+  }
+  .cinemaEp:hover{
+    background: rgba(255,255,255,0.10);
+  }
+  .cinemaEp.seen{
+    background: rgba(102,126,234,0.28);
+  }
+}
+
+/* =========================================================
+   ✅ NOVO (ATUALIZAÇÃO): FILMES + SÉRIES COMO "CAPA DE DVD"
+   - Menor no celular
+   - Proporção de poster (2/3)
+   - Visual de capa (brilho + borda)
+========================================================= */
+
+.cinemaCardRow{
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.cinemaCoverWrap{
+  flex: 0 0 auto;
+  width: 96px; /* desktop/tablet */
+}
+
+.cinemaCover{
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  border-radius: 14px;
+  overflow: hidden;
+  position: relative;
+  background:
+    radial-gradient(900px 280px at 20% 0%, rgba(255,255,255,0.45), transparent 60%),
+    linear-gradient(135deg, rgba(102,126,234,0.55), rgba(118,75,162,0.55));
+  border: 1px solid rgba(0,0,0,0.10);
+  box-shadow:
+    0 18px 30px rgba(0,0,0,0.20),
+    0 8px 14px rgba(0,0,0,0.10);
+  transform: translateZ(0);
+}
+
+.cinemaCover::before{
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(115deg,
+      rgba(255,255,255,0.42) 0%,
+      rgba(255,255,255,0.08) 22%,
+      rgba(255,255,255,0.0) 48%,
+      rgba(0,0,0,0.06) 100%);
+  opacity: .75;
+}
+
+.cinemaCover::after{
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.22);
+  opacity: .7;
+}
+
+.cinemaCover img{
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transform: scale(1.02);
+}
+
+.cinemaCoverBadge{
+  position: absolute;
+  left: 8px;
+  top: 8px;
+  z-index: 2;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .2px;
+  color: #fff;
+  background: rgba(0,0,0,0.30);
+  border: 1px solid rgba(255,255,255,0.20);
+  padding: 6px 8px;
+  border-radius: 999px;
+  backdrop-filter: blur(2px);
+}
+
+.cinemaCoverPlaceholder{
+  position: absolute;
+  inset: 0;
+  display: none;
+  align-items: flex-end;
+  padding: 10px;
+  color: #fff;
+  font-weight: 900;
+  text-shadow: 0 10px 26px rgba(0,0,0,0.35);
+  line-height: 1.2;
+}
+
+.cinemaCover.noimg .cinemaCoverPlaceholder{
+  display: flex;
+}
+
+/* Ajuste do texto ao lado da capa */
+.cinemaCardMain{
+  flex: 1;
+  min-width: 0;
+}
+
+/* responsivo capa no celular */
+@media (max-width: 700px){
+  .cinemaCoverWrap{ width: 86px; }
+}
+
+@media (max-width: 420px){
+  .cinemaCoverWrap{ width: 74px; }
+}
+
+/* dark mode capa */
+@media (prefers-color-scheme: dark){
+  .cinemaCover{
+    border-color: rgba(255,255,255,0.14);
+  }
+  .cinemaCover::after{
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.16);
+  }
+}

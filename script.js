@@ -310,6 +310,7 @@ auth.onAuthStateChanged(user => {
 
     // cinema: prepara label (sem abrir tela)
     cinemaPrepararDefaults();
+    cinemaOnTypeChange(); // ✅ garante que os campos de série sejam mostrados/ocultados corretamente
   } else {
     pararListeners();
     pararBibliaListener();
@@ -1292,11 +1293,25 @@ function cinemaPrepararDefaults(){
   if (label) label.textContent = `Você: ${cinemaNome(me)}`;
 }
 
+/* ✅ FIX: função existia no HTML (onchange) mas não existia no JS.
+   Agora ela mostra/oculta os campos de série corretamente. */
+function cinemaOnTypeChange(){
+  const typeEl = document.getElementById("cinemaType");
+  const wrapSeasons = document.getElementById("cinemaSeriesSeasonsWrap");
+  const wrapEps = document.getElementById("cinemaSeriesEpsWrap");
+  if (!typeEl) return;
+
+  const isSeries = String(typeEl.value || "movie") === "series";
+  if (wrapSeasons) wrapSeasons.style.display = isSeries ? "block" : "none";
+  if (wrapEps) wrapEps.style.display = isSeries ? "block" : "none";
+}
+
 function cinemaInitTela(){
   const user = auth.currentUser;
   if (!user) return;
 
   cinemaPrepararDefaults();
+  cinemaOnTypeChange(); // ✅ garante UI correta ao entrar
   cinemaAtivarListener();
   cinemaSetTab(cinemaTab || "todo");
   cinemaRender();
@@ -1320,6 +1335,9 @@ function cinemaAtivarListener(){
     .onSnapshot(snap => {
       cinemaItems = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       cinemaRender();
+    }, (err) => {
+      // ✅ ajuda a não "quebrar silencioso" se existir doc antigo sem createdAt
+      console.log("Erro listener cinema:", err);
     });
 }
 
@@ -1802,29 +1820,21 @@ async function cinemaSeriesUndoLast(id){
 }
 
 /* =========================
-   ✅ Card HTML com banner + checklist
+   ✅ FIX: Banner agora funciona pra FILMES e SÉRIES
+   - Antes você só renderizava banner em série
+   - E o cinemaAdd nem salvava o URL do campo cinemaBannerUrl para filmes
 ========================= */
 
 function cinemaBannerHTML(item){
   const title = String(item.title || "—");
   const url = String(item.bannerUrl || "").trim();
 
-  // só mostra banner "bonito" para séries (mas se você preencher em filme também vai aparecer)
-  if (!url) {
-    return `
-      <div class="cinemaBanner">
-        <div class="cinemaBannerOverlay"></div>
-        <div class="cinemaBannerTitle">
-          <span>${title}</span>
-          <span class="cinemaBannerMini">🎬</span>
-        </div>
-      </div>
-    `;
-  }
+  if (!url) return ""; // ✅ se não tem URL, não mostra nada (evita "capa vazia")
 
   return `
     <div class="cinemaBanner">
-      <img src="${url}" alt="banner" loading="lazy" onerror="this.style.display='none';">
+      <img src="${url}" alt="capa" loading="lazy"
+        onerror="this.style.display='none'; this.closest('.cinemaBanner')?.classList.add('noimg');">
       <div class="cinemaBannerOverlay"></div>
       <div class="cinemaBannerTitle">
         <span>${title}</span>
@@ -1960,7 +1970,8 @@ function cinemaCardHTML(item){
 
   const isSeries = cinemaIsSeries(item);
 
-  const banner = isSeries ? cinemaBannerHTML(item) : "";
+  // ✅ banner agora aparece se tiver URL (filme OU série)
+  const banner = cinemaBannerHTML(item);
 
   const badge1 = `<span class="cinemaBadge">${type}</span>`;
   const badge2 = `<span class="cinemaBadge cinemaBadgeSoft">📺 ${platform}</span>`;
@@ -1976,7 +1987,7 @@ function cinemaCardHTML(item){
   let extraBtn = "";
 
   if (!isSeries) {
-    // FILMES (mantido)
+    // FILMES
     if (status === "todo") {
       mainBtn = `<button onclick="cinemaMarkWatched('${item.id}')" title="Marcar como visto">✅ Marcar visto</button>`;
     } else {
@@ -1984,12 +1995,12 @@ function cinemaCardHTML(item){
       extraBtn = `<button class="cinemaGhostBtn" onclick="cinemaEditRating('${item.id}')" title="Editar nota">✏️ Nota</button>`;
     }
   } else {
-    // SÉRIES (novo)
+    // SÉRIES
     if (status === "watched") {
       mainBtn = `<button class="cinemaGhostBtn" onclick="cinemaUndoWatched('${item.id}')" title="Voltar pra Quero ver">↩️ Reabrir série</button>`;
       extraBtn = `<button class="cinemaGhostBtn" onclick="cinemaEditRating('${item.id}')" title="Editar nota">✏️ Nota</button>`;
     } else {
-      mainBtn = ""; // a área de séries já tem botões próprios (próximo ep etc.)
+      mainBtn = "";
       extraBtn = "";
     }
   }
@@ -2034,10 +2045,15 @@ async function cinemaAdd(){
   const titleEl = document.getElementById("cinemaTitle");
   const typeEl = document.getElementById("cinemaType");
   const platEl = document.getElementById("cinemaPlatform");
+  const bannerEl = document.getElementById("cinemaBannerUrl");
 
   const title = (titleEl ? String(titleEl.value) : "").trim();
   const type = (typeEl ? String(typeEl.value) : "movie").trim();
   const platform = (platEl ? String(platEl.value) : "outro").trim();
+
+  // ✅ FIX: pega a capa do input (funciona em filmes e séries)
+  let bannerUrl = (bannerEl ? String(bannerEl.value) : "").trim();
+  if (!bannerUrl) bannerUrl = null;
 
   if (!title) return alert("Digite um título 😊");
   if (type !== "movie" && type !== "series") return alert("Tipo inválido.");
@@ -2045,24 +2061,27 @@ async function cinemaAdd(){
 
   const suggestedBy = cinemaMeuRole();
 
-  // ✅ NOVO: se for série, já pergunta temporadas/episódios e banner
-  let bannerUrl = null;
+  // ✅ FIX: séries agora podem usar os campos da tela (sem prompt obrigatório)
   let series = null;
-
   if (type === "series") {
-    const seasonsCount = cinemaClampInt(prompt("Quantas temporadas essa série tem? (ex: 3)"), 1, 100);
-    const epsInput = prompt(
-      "Quantos episódios por temporada?\n\n" +
-      "• Se for igual em todas: digite um número (ex: 10)\n" +
-      "• Se for diferente: digite uma lista (ex: 10,12,8)\n\n" +
-      "Obs: se tiver mais temporadas do que números, repete o último."
-    );
-    const totals = cinemaSeriesParseEpisodesInput(seasonsCount, epsInput);
-    const seasons = cinemaSeriesBuildSeasons(seasonsCount, totals);
-    series = { seasons };
+    const seasonsCountEl = document.getElementById("cinemaSeasonsCount");
+    const epsEl = document.getElementById("cinemaEpisodesPerSeason");
 
-    bannerUrl = String(prompt("Cole o link do banner (imagem) da série.\n(Se não tiver agora, pode deixar vazio)", "") ?? "").trim();
-    if (!bannerUrl) bannerUrl = null;
+    const seasonsCountRaw = (seasonsCountEl ? seasonsCountEl.value : "").trim();
+    const epsRaw = (epsEl ? epsEl.value : "").trim();
+
+    // Se preencher, já cria o checklist inicial
+    if (seasonsCountRaw) {
+      const seasonsCount = cinemaClampInt(seasonsCountRaw, 1, 100);
+
+      // se eps vazio: cria temporadas com 0 episódios (e você configura depois no ⚙️)
+      const totals = epsRaw
+        ? cinemaSeriesParseEpisodesInput(seasonsCount, epsRaw)
+        : Array(seasonsCount).fill(0);
+
+      const seasons = cinemaSeriesBuildSeasons(seasonsCount, totals);
+      series = { seasons };
+    }
   }
 
   try {
@@ -2083,6 +2102,14 @@ async function cinemaAdd(){
     });
 
     if (titleEl) titleEl.value = "";
+    if (bannerEl) bannerEl.value = ""; // limpa a URL depois de adicionar
+
+    // limpa campos de série
+    const seasonsCountEl = document.getElementById("cinemaSeasonsCount");
+    const epsEl = document.getElementById("cinemaEpisodesPerSeason");
+    if (seasonsCountEl) seasonsCountEl.value = "";
+    if (epsEl) epsEl.value = "";
+
     alert("🎬 Adicionado na lista!");
   } catch (e) {
     alert("Erro ao adicionar: " + (e.message || e));
@@ -2144,7 +2171,6 @@ async function cinemaUndoWatched(id){
     await cinemaRef.doc(id).set({
       status: "todo",
       watchedAt: null,
-      // rating: null,  // (mantive seu comportamento original) -> você zerava a nota
       rating: null,
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     }, { merge: true });
@@ -2621,8 +2647,9 @@ window.cinemaToggleFav = cinemaToggleFav;
 window.cinemaDelete = cinemaDelete;
 window.cinemaPickRandom = cinemaPickRandom;
 window.cinemaClearRandom = cinemaClearRandom;
+window.cinemaOnTypeChange = cinemaOnTypeChange; // ✅ FIX: existia no HTML
 
-// ✅ NOVO: séries (checklist)
+// ✅ séries (checklist)
 window.cinemaSeriesToggleChecklist = cinemaSeriesToggleChecklist;
 window.cinemaSeriesConfigure = cinemaSeriesConfigure;
 window.cinemaSeriesToggleEpisode = cinemaSeriesToggleEpisode;
