@@ -1293,6 +1293,85 @@ function cinemaPrepararDefaults(){
   if (label) label.textContent = `Você: ${cinemaNome(me)}`;
 }
 
+/* ✅ NOVO: injeta CSS do banner automaticamente (não precisa mexer no style.css) */
+function cinemaEnsureBannerCSS(){
+  const id = "cinemaBannerAutoCss";
+  if (document.getElementById(id)) return;
+
+  const st = document.createElement("style");
+  st.id = id;
+  st.textContent = `
+    .cinemaBanner{
+      position: relative;
+      width: 100%;
+      overflow: hidden;
+      border-radius: 16px;
+      height: 160px;
+      background: rgba(255,255,255,0.08);
+      isolation: isolate;
+    }
+    @media (min-width: 700px){
+      .cinemaBanner{ height: 210px; }
+    }
+
+    .cinemaBannerBg{
+      position:absolute;
+      inset:0;
+      background-size: cover;
+      background-position: center;
+      filter: blur(18px);
+      transform: scale(1.12);
+      opacity: 0.55;
+      z-index: 0;
+    }
+
+    .cinemaBannerImg{
+      position:absolute;
+      inset:0;
+      width:100%;
+      height:100%;
+      object-fit: contain;     /* ✅ mostra 100% da imagem */
+      object-position: center;
+      z-index: 1;
+    }
+
+    .cinemaBannerOverlay{
+      position:absolute;
+      inset:0;
+      background: linear-gradient(180deg, rgba(0,0,0,0.25), rgba(0,0,0,0.60));
+      z-index: 2;
+      pointer-events:none;
+    }
+
+    .cinemaBannerTitle{
+      position:absolute;
+      left:12px;
+      right:12px;
+      bottom:10px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      z-index: 3;
+      color: #fff;
+      font-weight: 700;
+      text-shadow: 0 2px 12px rgba(0,0,0,0.55);
+    }
+
+    .cinemaBannerTitle span:first-child{
+      overflow:hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .cinemaBannerMini{
+      opacity: .9;
+      flex: 0 0 auto;
+    }
+  `;
+  document.head.appendChild(st);
+}
+
 /* ✅ FIX: função existia no HTML (onchange) mas não existia no JS.
    Agora ela mostra/oculta os campos de série corretamente. */
 function cinemaOnTypeChange(){
@@ -1309,6 +1388,8 @@ function cinemaOnTypeChange(){
 function cinemaInitTela(){
   const user = auth.currentUser;
   if (!user) return;
+
+  cinemaEnsureBannerCSS(); // ✅ garante banner perfeito em qualquer device
 
   cinemaPrepararDefaults();
   cinemaOnTypeChange(); // ✅ garante UI correta ao entrar
@@ -1820,24 +1901,42 @@ async function cinemaSeriesUndoLast(id){
 }
 
 /* =========================
-   ✅ FIX: Banner agora funciona pra FILMES e SÉRIES
-   - Antes você só renderizava banner em série
-   - E o cinemaAdd nem salvava o URL do campo cinemaBannerUrl para filmes
+   ✅ BANNER PERFEITO (FILMES E SÉRIES)
+   - altura fixa
+   - mostra 100% da imagem (contain)
+   - fundo blur para preencher
 ========================= */
+
+function cinemaEscapeAttr(s){
+  return String(s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+function cinemaEscapeCssUrl(s){
+  // evita quebrar o CSS inline do background-image
+  try { return encodeURI(String(s ?? "").trim()); } catch (e) { return ""; }
+}
 
 function cinemaBannerHTML(item){
   const title = String(item.title || "—");
-  const url = String(item.bannerUrl || "").trim();
 
-  if (!url) return ""; // ✅ se não tem URL, não mostra nada (evita "capa vazia")
+  // ✅ aceita bannerUrl (seu padrão), mas também tenta compat com dados antigos se existir
+  const rawUrl = String(item.bannerUrl || item.coverUrl || item.posterUrl || "").trim();
+  if (!rawUrl) return ""; // mantém seu layout (sem banner se não tiver link)
+
+  const safeAttr = cinemaEscapeAttr(rawUrl);
+  const safeCss = cinemaEscapeCssUrl(rawUrl);
 
   return `
     <div class="cinemaBanner">
-      <img src="${url}" alt="capa" loading="lazy"
+      <div class="cinemaBannerBg" style="background-image:url('${safeCss}')"></div>
+      <img class="cinemaBannerImg" src="${safeAttr}" alt="capa" loading="lazy"
         onerror="this.style.display='none'; this.closest('.cinemaBanner')?.classList.add('noimg');">
       <div class="cinemaBannerOverlay"></div>
       <div class="cinemaBannerTitle">
-        <span>${title}</span>
+        <span>${cinemaEscapeAttr(title)}</span>
         <span class="cinemaBannerMini">🎬</span>
       </div>
     </div>
@@ -1970,7 +2069,7 @@ function cinemaCardHTML(item){
 
   const isSeries = cinemaIsSeries(item);
 
-  // ✅ banner agora aparece se tiver URL (filme OU série)
+  // ✅ banner agora aparece se tiver URL (filme OU série) e SEMPRE ajustado
   const banner = cinemaBannerHTML(item);
 
   const badge1 = `<span class="cinemaBadge">${type}</span>`;
