@@ -163,6 +163,11 @@
         <div class="biblePaper" id="biblePaper">
           <div class="bibleBookmark" aria-hidden="true"></div>
 
+          <!-- ✅ medalha 7 dias seguidos (os dois) -->
+          <div class="bibleGoldSeal" id="bibStreakMedal" style="display:none;">
+            🏅 Meta: 7 dias seguidos (os dois)
+          </div>
+
           <div class="bibleGoldSeal" id="bibGoldSeal" style="display:none;">
             🏅 Leitura completa (os dois)
           </div>
@@ -173,8 +178,16 @@
               <strong id="bibDiaLabel">Carregando...</strong>
             </div>
 
-            <div class="bibleHeaderRight">
-              <span class="bibleTinyHint">Página de leitura</span>
+            <div class="bibleHeaderRight" style="display:flex; gap:8px; align-items:center;">
+              <button class="btnSecundario" style="padding:8px 10px; font-size:12px;" onclick="bibliaAbrirNoApp()">
+                📲 Abrir no app
+              </button>
+              <button class="btnSecundario" style="padding:8px 10px; font-size:12px;" onclick="bibliaToggleTema()">
+                🌓 Tema
+              </button>
+              <button class="btnSecundario" style="padding:8px 10px; font-size:12px;" onclick="bibliaAbrirPapelModal()">
+                👤 Eu sou…
+              </button>
             </div>
           </div>
 
@@ -189,6 +202,12 @@
             <p class="bibleDisclaimer">
               (O texto não aparece aqui por direitos autorais de traduções — vocês leem no app/Bíblia que preferirem 💜)
             </p>
+
+            <!-- ✅ streak/consistência + dicas inteligentes -->
+            <div id="bibStatsBox" style="margin-top:10px; font-size:13px; opacity:.95;">
+              <div id="bibStatsLine">Carregando stats…</div>
+              <div id="bibHintLine" style="margin-top:6px; opacity:.92;"></div>
+            </div>
           </div>
 
           <div class="bibleActionsRow">
@@ -229,8 +248,48 @@
             Sincronizado pros dois ao virar a página
             <span class="bibleFooterDot">•</span>
           </div>
+
+          <!-- ✅ HISTÓRICO (calendar view simples) -->
+          <hr style="margin:14px 0; opacity:.35;" />
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+            <strong style="font-size:14px;">📅 Histórico</strong>
+            <div style="display:flex; gap:8px; align-items:center;">
+              <button class="btnSecundario" style="padding:7px 10px; font-size:12px;" onclick="bibliaVoltarParaHoje()">📍 Hoje</button>
+              <span style="font-size:12px; opacity:.75;">toque num dia pra abrir</span>
+            </div>
+          </div>
+
+          <div id="bibHistoryGrid" style="margin-top:10px;">
+            <p style="margin:0; opacity:.75;">Carregando histórico…</p>
+          </div>
+
         </div>
       </div>
+
+      <!-- ✅ MODAL: escolher papel Ash/Deh -->
+      <div id="bibRoleModal" style="display:none;" role="dialog" aria-modal="true">
+        <div id="bibRoleBackdrop"></div>
+        <div id="bibRoleCard">
+          <div style="display:flex; justify-content:space-between; gap:10px; align-items:center;">
+            <strong style="font-size:16px;">👤 Quem está usando este aparelho?</strong>
+            <button class="btnSecundario" style="padding:6px 10px; font-size:12px;" onclick="bibliaFecharPapelModal()">✖</button>
+          </div>
+
+          <p style="margin:10px 0 0; opacity:.85; font-size:13px;">
+            Isso define o seu “papel” no checklist (pra separar Ash e Deh).
+          </p>
+
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:12px;">
+            <button onclick="bibliaDefinirPapel('ash')" style="padding:12px; border-radius:12px; font-weight:700;">Sou Ash</button>
+            <button onclick="bibliaDefinirPapel('deh')" style="padding:12px; border-radius:12px; font-weight:700;">Sou Deh</button>
+          </div>
+
+          <p style="margin:10px 0 0; opacity:.7; font-size:12px;">
+            Você pode mudar depois no botão “👤 Eu sou…” lá em cima.
+          </p>
+        </div>
+      </div>
+
     </div>
 
     <!-- =====================
@@ -325,7 +384,6 @@
          TELA JOGOS (GAMER HUB 🎮)
     ====================== -->
     <div id="telaJogos" class="tela" style="display:none;">
-
       <section class="cardVoltar">
         <button class="btnVoltar" onclick="irPara('home')">⬅️ Voltar</button>
       </section>
@@ -368,7 +426,6 @@
                 <label for="gamesPlatform">Plataforma</label>
                 <select id="gamesPlatform">
                   <option value="pc">PC</option>
-
                   <option value="ps5">PlayStation 5</option>
                   <option value="ps4">PlayStation 4</option>
                   <option value="ps3">PlayStation 3</option>
@@ -376,12 +433,10 @@
                   <option value="ps1">PlayStation 1</option>
                   <option value="psp">PSP</option>
                   <option value="psvita">PS Vita</option>
-
                   <option value="xboxseries">Xbox Series X|S</option>
                   <option value="xboxone">Xbox One</option>
                   <option value="xbox360">Xbox 360</option>
                   <option value="xboxclassic">Xbox (Classic)</option>
-
                   <option value="switch">Nintendo Switch</option>
                   <option value="wiiu">Wii U</option>
                   <option value="wii">Wii</option>
@@ -389,7 +444,6 @@
                   <option value="n64">Nintendo 64</option>
                   <option value="snes">Super Nintendo</option>
                   <option value="nes">Nintendo (NES)</option>
-
                   <option value="mobile">Mobile</option>
                   <option value="other">Outro</option>
                 </select>
@@ -620,5 +674,8 @@
 
   <!-- SCRIPT -->
   <script src="script.js"></script>
+
+  <!-- ✅ UPGRADES DA BÍBLIA (não mexe no resto) -->
+  <script src="biblia-upgrades.js"></script>
 </body>
 </html>

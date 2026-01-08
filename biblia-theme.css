@@ -1,0 +1,313 @@
+/* =========================================================
+   TEMA EXCLUSIVO - BÍBLIA (Checklist)
+   Arquivo: biblia-theme.css
+   - Ajustado para CONTRASTE ALTO (título e textos bem visíveis)
+   - Só afeta #telaBiblia
+========================================================= */
+
+#telaBiblia{
+  padding-bottom: 24px;
+}
+
+/* Stage (o fundo da Bíblia) */
+#telaBiblia .bibleBookStage{
+  position: relative;
+  padding: 18px 14px 26px;
+  border-radius: 18px;
+
+  background:
+    radial-gradient(900px 380px at 20% 10%, rgba(255, 230, 165, .18), transparent 60%),
+    radial-gradient(700px 360px at 80% 20%, rgba(255, 210, 120, .12), transparent 60%),
+    radial-gradient(900px 520px at 50% 110%, rgba(0,0,0,.35), transparent 60%),
+    linear-gradient(180deg, rgba(30, 30, 44, .15), rgba(0,0,0,.25));
+  border: 1px solid rgba(255,255,255,.10);
+
+  box-shadow:
+    0 18px 55px rgba(0,0,0,.35),
+    inset 0 1px 0 rgba(255,255,255,.08);
+}
+
+#telaBiblia .bibleAmbientGlow{
+  position: absolute;
+  inset: -25px;
+  pointer-events: none;
+  background:
+    radial-gradient(520px 260px at 30% 20%, rgba(255, 215, 140, .22), transparent 60%),
+    radial-gradient(520px 260px at 70% 15%, rgba(255, 195, 110, .16), transparent 60%);
+  filter: blur(6px);
+  opacity: .9;
+}
+
+/* “papel” (mais contrastado) */
+#telaBiblia .biblePaper{
+  position: relative;
+  overflow: hidden;
+  border-radius: 18px;
+  padding: 16px 16px 14px;
+
+  /* mais “papel” e menos transparente */
+  background: linear-gradient(180deg, rgba(255, 250, 238, .98), rgba(255, 242, 214, .96));
+  color: #241c10;
+
+  border: 1px solid rgba(92, 67, 21, .22);
+  box-shadow:
+    0 14px 34px rgba(0,0,0,.25),
+    inset 0 1px 0 rgba(255,255,255,.55);
+}
+
+/* textura leve */
+#telaBiblia .biblePaper::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  background:
+    repeating-linear-gradient(
+      0deg,
+      rgba(90, 65, 20, .08),
+      rgba(90, 65, 20, .08) 1px,
+      transparent 1px,
+      transparent 14px
+    );
+  opacity:.18;
+  mix-blend-mode:multiply;
+}
+
+/* bookmark */
+#telaBiblia .bibleBookmark{
+  position:absolute;
+  top:0;
+  right:22px;
+  width: 18px;
+  height: 54px;
+  background: linear-gradient(180deg, #b22222, #7e1414);
+  border-radius: 0 0 10px 10px;
+  box-shadow: 0 8px 18px rgba(0,0,0,.22);
+  opacity:.92;
+}
+
+/* selos */
+#telaBiblia .bibleGoldSeal{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  margin: 6px 0 10px;
+
+  background: linear-gradient(180deg, rgba(255, 215, 120, .92), rgba(255, 196, 90, .86));
+  border: 1px solid rgba(116, 74, 10, .40);
+  box-shadow: 0 10px 22px rgba(0,0,0,.18);
+  color: #2b1f0c;
+  font-weight: 900;
+}
+
+/* header */
+#telaBiblia .bibleHeader{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom: 10px;
+}
+
+#telaBiblia .bibleDayPill{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+
+  background: rgba(255,255,255,.72);
+  border: 1px solid rgba(120, 86, 20, .22);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.55);
+  color: #241c10;
+}
+
+#telaBiblia .bibleDayPill strong{
+  color:#241c10;
+}
+
+/* botões do topo (Abrir no app / Eu sou...) */
+#telaBiblia .bibleHeaderRight .btnSecundario{
+  background: rgba(255,255,255,.78);
+  border: 1px solid rgba(120, 86, 20, .26);
+  color: #241c10;
+  border-radius: 12px;
+  box-shadow: 0 10px 22px rgba(0,0,0,.12);
+}
+#telaBiblia .bibleHeaderRight .btnSecundario:hover{
+  transform: translateY(-1px);
+}
+
+/* ======= AQUI É O PRINCIPAL: TÍTULO BEM VISÍVEL ======= */
+#telaBiblia .bibleBookTitle{
+  margin: 8px 0 2px;
+  font-size: 34px;
+  letter-spacing: .4px;
+
+  /* cor bem escura */
+  color: #1e160c !important;
+
+  /* sombra suave pra destacar */
+  text-shadow: 0 1px 0 rgba(255,255,255,.6), 0 8px 18px rgba(0,0,0,.10);
+
+  /* remove qualquer “lavagem” */
+  opacity: 1 !important;
+}
+
+/* referência */
+#telaBiblia .bibleRefLine{
+  margin: 0;
+  display:flex;
+  gap:10px;
+  align-items:baseline;
+}
+#telaBiblia .bibleRefLabel{
+  font-weight:900;
+  opacity: .85;
+  color:#2b1f0c;
+}
+#telaBiblia .bibleRefValue{
+  font-weight:900;
+  color:#1e160c;
+}
+
+/* texto/descrição mais legível */
+#telaBiblia .bibleDisclaimer{
+  margin: 8px 0 0;
+  opacity: .92;
+  color: #2a2216;
+}
+
+/* stats */
+#telaBiblia #bibStatsBox,
+#telaBiblia #bibStatsLine{
+  color:#2a2216;
+  opacity: 1;
+}
+
+/* ações */
+#telaBiblia .bibleActionsRow{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin: 14px 0 10px;
+}
+
+#telaBiblia .biblePrimaryInk,
+#telaBiblia .bibleSecondaryInk,
+#telaBiblia .bibleSoundBtn{
+  border-radius: 14px;
+  padding: 10px 12px;
+  border: 1px solid rgba(120, 86, 20, .22);
+  background: rgba(255,255,255,.72);
+  color: #241c10;
+  box-shadow: 0 10px 22px rgba(0,0,0,.12);
+  font-weight: 800;
+}
+
+#telaBiblia .biblePrimaryInk{
+  background: linear-gradient(180deg, rgba(255,255,255,.82), rgba(255,255,255,.66));
+}
+
+#telaBiblia .biblePageBtn{
+  border-radius: 14px;
+  padding: 10px 12px;
+  border: 1px solid rgba(120, 86, 20, .22);
+  background: rgba(255,255,255,.70);
+  color: #241c10;
+  box-shadow: 0 10px 22px rgba(0,0,0,.12);
+}
+
+/* selos Ash/Deh */
+#telaBiblia .bibleSeals{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+#telaBiblia .bibleSeal{
+  padding: 12px;
+  border-radius: 16px;
+  background: rgba(255,255,255,.72);
+  border: 1px solid rgba(120, 86, 20, .18);
+  box-shadow: 0 12px 26px rgba(0,0,0,.10);
+  color:#241c10;
+}
+
+#telaBiblia .bibleSealTop{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom: 6px;
+}
+#telaBiblia .bibleSealStatus{
+  font-weight: 900;
+  opacity: 1;
+  color:#241c10;
+}
+
+/* footer */
+#telaBiblia .bibleFooterNote{
+  color:#2b1f0c;
+  opacity: .85;
+}
+
+/* histórico */
+#telaBiblia #bibHistoryGrid{
+  display:grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 10px;
+}
+
+#telaBiblia .bibDayBtn{
+  padding: 10px 10px;
+  border-radius: 14px;
+  border: 1px solid rgba(120, 86, 20, .20);
+  background: rgba(255,255,255,.78);
+  color: #241c10;
+  font-weight: 900;
+  box-shadow: 0 10px 22px rgba(0,0,0,.08);
+}
+
+#telaBiblia .bibDayBtn small{
+  display:block;
+  font-weight: 800;
+  opacity: .80;
+  margin-top: 4px;
+}
+
+/* modal papel */
+#telaBiblia #bibRoleModal{
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+}
+#telaBiblia #bibRoleBackdrop{
+  position:absolute;
+  inset:0;
+  background: rgba(0,0,0,.55);
+  backdrop-filter: blur(3px);
+}
+#telaBiblia #bibRoleCard{
+  position: relative;
+  width: min(520px, calc(100vw - 26px));
+  margin: 90px auto 0;
+  padding: 16px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(255, 250, 238, .98), rgba(255, 242, 214, .96));
+  border: 1px solid rgba(120, 86, 20, .26);
+  box-shadow: 0 18px 55px rgba(0,0,0,.35);
+  color:#241c10;
+}
+
+/* responsivo */
+@media (max-width: 560px){
+  #telaBiblia .bibleBookTitle{ font-size: 28px; }
+  #telaBiblia .bibleSeals{ grid-template-columns: 1fr; }
+  #telaBiblia #bibHistoryGrid{ grid-template-columns: repeat(4, 1fr); }
+}
