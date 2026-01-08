@@ -78,7 +78,7 @@
             <div class="btnMenuIcon">🎮</div>
             <div class="btnMenuTexto">
               <strong>Jogos</strong>
-              <span>Jogar juntos em tempo real</span>
+              <span>Backlog, jogando e zerados</span>
             </div>
           </button>
 
@@ -322,15 +322,136 @@
     </div>
 
     <!-- =====================
-         TELA JOGOS
+         TELA JOGOS (GAMER HUB 🎮)
     ====================== -->
     <div id="telaJogos" class="tela" style="display:none;">
-      <section>
-        <h2>🎮 Jogos</h2>
-        <p style="margin:0; opacity:.85;">
-          Em breve: joguinhos em tempo real pra vocês dois 💜
-        </p>
+
+      <section class="cardVoltar">
+        <button class="btnVoltar" onclick="irPara('home')">⬅️ Voltar</button>
       </section>
+
+      <div class="gamesShell">
+
+        <div class="gamesHeader">
+          <div class="gamesHeaderLeft">
+            <div class="gamesTitle">
+              <span class="gamesTitleIcon">🎮</span>
+              <span class="gamesTitleText">Gamer Hub</span>
+            </div>
+            <div class="gamesSub">
+              Backlog, jogando agora e zerados — com capa, plataforma, nota, favoritos e sorteio 💜
+            </div>
+          </div>
+
+          <div class="gamesHeaderRight">
+            <div class="gamesMeLine" id="gamesMeLabel">Você: —</div>
+            <div class="gamesStatsLine" id="gamesStatsLine">Stats: —</div>
+          </div>
+        </div>
+
+        <div class="gamesPanel">
+
+          <!-- ADD GAME -->
+          <div class="gamesAddCard">
+            <div class="gamesAddTop">
+              <div class="gamesAddTitle">➕ Adicionar jogo</div>
+              <div class="gamesAddHint">Use um link direto de imagem (jpg/png/webp) pra capa aparecer certinho.</div>
+            </div>
+
+            <div class="gamesFormGrid">
+              <div class="gamesField">
+                <label for="gamesTitle">Título</label>
+                <input id="gamesTitle" placeholder="Ex: God of War Ragnarök" />
+              </div>
+
+              <div class="gamesField">
+                <label for="gamesPlatform">Plataforma</label>
+                <select id="gamesPlatform">
+                  <option value="pc">PC</option>
+
+                  <option value="ps5">PlayStation 5</option>
+                  <option value="ps4">PlayStation 4</option>
+                  <option value="ps3">PlayStation 3</option>
+                  <option value="ps2">PlayStation 2</option>
+                  <option value="ps1">PlayStation 1</option>
+                  <option value="psp">PSP</option>
+                  <option value="psvita">PS Vita</option>
+
+                  <option value="xboxseries">Xbox Series X|S</option>
+                  <option value="xboxone">Xbox One</option>
+                  <option value="xbox360">Xbox 360</option>
+                  <option value="xboxclassic">Xbox (Classic)</option>
+
+                  <option value="switch">Nintendo Switch</option>
+                  <option value="wiiu">Wii U</option>
+                  <option value="wii">Wii</option>
+                  <option value="gc">GameCube</option>
+                  <option value="n64">Nintendo 64</option>
+                  <option value="snes">Super Nintendo</option>
+                  <option value="nes">Nintendo (NES)</option>
+
+                  <option value="mobile">Mobile</option>
+                  <option value="other">Outro</option>
+                </select>
+              </div>
+
+              <div class="gamesField">
+                <label for="gamesStatus">Status</label>
+                <select id="gamesStatus">
+                  <option value="todo">Quero jogar</option>
+                  <option value="playing">Jogando</option>
+                  <option value="done">Zerado</option>
+                </select>
+              </div>
+
+              <div class="gamesField">
+                <label for="gamesCoverUrl">Capa (URL)</label>
+                <input id="gamesCoverUrl" placeholder="https://.../capa.jpg" />
+              </div>
+
+              <div class="gamesField">
+                <label for="gamesHours">Horas (opcional)</label>
+                <input id="gamesHours" placeholder="Ex: 28" inputmode="numeric" />
+              </div>
+
+              <div class="gamesField gamesFieldWide">
+                <label for="gamesNotes">Notas (opcional)</label>
+                <input id="gamesNotes" placeholder="Ex: quero platinar / coop / modo história..." />
+              </div>
+            </div>
+
+            <div class="gamesAddActions">
+              <button class="gamesBtnPrimary" onclick="gamesAdd()">🎮 Adicionar</button>
+              <button class="gamesBtnGhost" onclick="gamesPickRandom()">🎲 Sortear do backlog</button>
+              <button class="gamesBtnGhost" onclick="gamesClearRandom()">🧹 Limpar sorteio</button>
+            </div>
+
+            <div id="gamesRandomResult" class="gamesRandomBox"></div>
+          </div>
+
+          <!-- TABS -->
+          <div class="gamesTabs">
+            <button id="gamesTabTodo" class="gamesTab active" onclick="gamesSetTab('todo')">
+              📌 Quero jogar <span class="gamesCount" id="gamesCountTodo">0</span>
+            </button>
+            <button id="gamesTabPlaying" class="gamesTab" onclick="gamesSetTab('playing')">
+              🔥 Jogando <span class="gamesCount" id="gamesCountPlaying">0</span>
+            </button>
+            <button id="gamesTabDone" class="gamesTab" onclick="gamesSetTab('done')">
+              ✅ Zerados <span class="gamesCount" id="gamesCountDone">0</span>
+            </button>
+            <button id="gamesTabFav" class="gamesTab" onclick="gamesSetTab('fav')">
+              ⭐ Favoritos <span class="gamesCount" id="gamesCountFav">0</span>
+            </button>
+          </div>
+
+          <!-- LIST -->
+          <div id="gamesList" class="gamesList">
+            <p style="margin:0; opacity:.75;">Carregando…</p>
+          </div>
+
+        </div>
+      </div>
     </div>
 
     <!-- =====================
