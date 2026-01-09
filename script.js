@@ -352,6 +352,14 @@ function registrarServiceWorker() {
 }
 
 // ================= LISTENERS FIRESTORE (FINANCEIRO) =================
+
+// ✅ (NOVO) parse de dinheiro aceitando vírgula
+function _parseMoneyPrompt(raw){
+  const t = String(raw ?? "").trim();
+  if (!t) return NaN;
+  return Number.parseFloat(t.replace(",", "."));
+}
+
 function iniciarListeners() {
   const user = auth.currentUser;
   if (!user) return;
@@ -366,6 +374,9 @@ function iniciarListeners() {
       atualizarEntradas();
       atualizarSaldo();
       primeiraCargaEntradas = false;
+    }, (err) => {
+      console.log("Erro listener entradas:", err);
+      alert("Erro ao carregar ENTRADAS: " + (err && err.message ? err.message : err));
     });
 
   unsubscribeSaidas = saidasRef
@@ -376,6 +387,9 @@ function iniciarListeners() {
       atualizarSaidas();
       atualizarSaldo();
       primeiraCargaSaidas = false;
+    }, (err) => {
+      console.log("Erro listener saídas:", err);
+      alert("Erro ao carregar SAÍDAS: " + (err && err.message ? err.message : err));
     });
 
   unsubscribeVencimentos = vencimentosRef
@@ -386,6 +400,9 @@ function iniciarListeners() {
       atualizarVencimentos();
       primeiraCargaVencimentos = false;
       verificarVencimentos(false);
+    }, (err) => {
+      console.log("Erro listener vencimentos:", err);
+      alert("Erro ao carregar VENCIMENTOS: " + (err && err.message ? err.message : err));
     });
 }
 
@@ -399,60 +416,81 @@ function pararListeners() {
 }
 
 // ================= ADICIONAR (FINANCEIRO) =================
-function adicionarEntrada() {
+async function adicionarEntrada() {
   const user = auth.currentUser;
   if (!user) return alert("Faça login.");
 
   const titulo = prompt("Nome da entrada:");
-  const valor = Number.parseFloat(prompt("Valor:"));
+  const valorRaw = prompt("Valor:");
+  const valor = _parseMoneyPrompt(valorRaw);
+
   if (!titulo || Number.isNaN(valor)) return alert("Dados inválidos");
 
-  entradasRef.add({
-    titulo,
-    valor,
-    usuario: user.email,
-    mesRef: mesSelecionado,
-    criadoEm: firebase.firestore.FieldValue.serverTimestamp()
-  });
+  try {
+    await entradasRef.add({
+      titulo,
+      valor,
+      usuario: user.email,
+      mesRef: mesSelecionado,
+      criadoEm: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  } catch (e) {
+    console.log("Erro adicionarEntrada:", e);
+    alert("Erro ao salvar ENTRADA: " + (e && e.message ? e.message : e));
+  }
 }
 
-function adicionarSaida() {
+async function adicionarSaida() {
   const user = auth.currentUser;
   if (!user) return alert("Faça login.");
 
   const titulo = prompt("Nome da saída:");
-  const valor = Number.parseFloat(prompt("Valor:"));
+  const valorRaw = prompt("Valor:");
+  const valor = _parseMoneyPrompt(valorRaw);
+
   if (!titulo || Number.isNaN(valor)) return alert("Dados inválidos");
 
-  saidasRef.add({
-    titulo,
-    valor,
-    usuario: user.email,
-    mesRef: mesSelecionado,
-    criadoEm: firebase.firestore.FieldValue.serverTimestamp()
-  });
+  try {
+    await saidasRef.add({
+      titulo,
+      valor,
+      usuario: user.email,
+      mesRef: mesSelecionado,
+      criadoEm: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  } catch (e) {
+    console.log("Erro adicionarSaida:", e);
+    alert("Erro ao salvar SAÍDA: " + (e && e.message ? e.message : e));
+  }
 }
 
-function adicionarVencimento() {
+async function adicionarVencimento() {
   const user = auth.currentUser;
   if (!user) return alert("Faça login.");
 
   const titulo = prompt("Conta:");
-  const valor = Number.parseFloat(prompt("Valor:"));
+  const valorRaw = prompt("Valor:");
   const dia = Number.parseInt(prompt("Dia do vencimento (1-31):"), 10);
+
+  const valor = _parseMoneyPrompt(valorRaw);
 
   if (!titulo || Number.isNaN(valor) || Number.isNaN(dia) || dia < 1 || dia > 31) {
     return alert("Dados inválidos");
   }
 
-  vencimentosRef.add({
-    titulo,
-    valor,
-    dia,
-    pago: false,
-    usuario: user.email,
-    mesRef: mesSelecionado
-  });
+  try {
+    await vencimentosRef.add({
+      titulo,
+      valor,
+      dia,
+      pago: false,
+      usuario: user.email,
+      mesRef: mesSelecionado
+    });
+  } catch (e) {
+    console.log("Erro adicionarVencimento:", e);
+    alert("Erro ao salvar VENCIMENTO: " + (e && e.message ? e.message : e));
+  }
 }
 
 // ================= LISTAS (FINANCEIRO) =================
