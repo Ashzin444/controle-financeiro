@@ -239,8 +239,7 @@
 
   function bibliaFecharPapelModal() {
     const modal = $("bibRoleModal");
-    if (!modal) return;
-    modal.style.display = "none";
+    if (modal) modal.style.display = "none";
   }
 
   function bibliaDefinirPapel(pessoa) {
@@ -251,7 +250,6 @@
     bibliaFecharPapelModal();
 
     // Atualiza a tela sem mudar nada fora da Bíblia
-    // Se existir carregarBibliaAtual, chama.
     if (typeof window.carregarBibliaAtual === "function") {
       window.carregarBibliaAtual(true).catch(() => {});
     }
@@ -268,18 +266,14 @@
   function ensureRoleSelectedOrAsk() {
     const papel = localStorage.getItem(PAPER_KEY);
     if (papel === "eu" || papel === "ela") return;
-    // Se não tem, abre o modal (sem confirm)
     bibliaAbrirPapelModal();
   }
 
   // ---------- Item 2 + 3 + 10: Histórico, consistência, streak, meta 7 juntos e dicas ----------
-  // Vamos trabalhar por "dayIndex" que no seu app é o currentIndex (docId v{n})
-  // Analisamos a janela de 30 dias (últimos 30 índices)
   const WINDOW_DAYS = 30;
   const META_JUNTOS = 7;
 
   async function getCurrentIndexSafe() {
-    // precisa do bibliaEstadoRef e db do seu script.js
     if (!window.bibliaEstadoRef) return 1;
     try {
       const snap = await window.bibliaEstadoRef.get();
@@ -292,14 +286,17 @@
   }
 
   async function fetchWindowDocs(fromIdx, toIdx) {
-    // retorna array [{ idx, data }]
     const out = [];
     if (!window.bibliaLeiturasRef) return out;
 
     const promises = [];
     for (let i = fromIdx; i <= toIdx; i++) {
       const ref = window.bibliaLeiturasRef.doc("v" + i);
-      promises.push(ref.get().then(s => ({ idx: i, data: s.exists ? (s.data() || {}) : {} })).catch(() => ({ idx: i, data: {} })));
+      promises.push(
+        ref.get()
+          .then(s => ({ idx: i, data: s.exists ? (s.data() || {}) : {} }))
+          .catch(() => ({ idx: i, data: {} }))
+      );
     }
     const arr = await Promise.all(promises);
     arr.sort((a, b) => a.idx - b.idx);
@@ -335,7 +332,6 @@
     const euLido = !!todayData.euLido;
     const elaLido = !!todayData.elaLido;
 
-    // Quem é "você" nesse aparelho?
     const meName = papelToPessoa(mePapel);
     const otherName = papelToPessoa(otherPapel(mePapel));
 
@@ -352,7 +348,6 @@
     const statsEl = $("bibStatsLine");
     const medal = $("bibStreakMedal");
 
-    // Linha de stats + meta
     const metaProgress = Math.min(META_JUNTOS, juntosStreak);
     const metaLine = `🎯 Meta ${META_JUNTOS} juntos: ${metaProgress}/${META_JUNTOS}`;
 
@@ -378,8 +373,6 @@
   }
 
   async function bibliaIrParaDia(idx) {
-    // Muda o "dia/versículo atual" compartilhado (mesma ideia do seu próximo/anterior)
-    // Para garantir consistência pros dois.
     const user = window.auth?.currentUser;
     if (!user) return alert("Faça login.");
 
@@ -407,8 +400,6 @@
         }, { merge: true });
       });
 
-      // carregarBibliaAtual já vai ser chamado pelo listener do estado global
-      // mas chamamos também pra não depender do timing
       if (typeof window.carregarBibliaAtual === "function") {
         window.carregarBibliaAtual(true).catch(() => {});
       }
@@ -434,7 +425,6 @@
 
     const meP = getPapel();
 
-    // Preenche os "vazios" pra ficar 30 sempre (quando index < 30)
     const totalCells = WINDOW_DAYS;
     const missing = Math.max(0, totalCells - (currentIndex - start + 1));
 
@@ -447,7 +437,6 @@
       wrap.appendChild(ph);
     }
 
-    // Cria botões do histórico
     const map = new Map(windowDocs.map(x => [x.idx, x.data]));
 
     for (let idx = start; idx <= currentIndex; idx++) {
@@ -460,10 +449,7 @@
       btn.className = "bibDayBtn";
       btn.type = "button";
 
-      // marca "selected" = o dia atual
       btn.classList.toggle("selected", idx === currentIndex);
-
-      // "today": o dia atual (mesmo conceito)
       btn.classList.toggle("today", idx === currentIndex);
 
       btn.innerHTML = `
@@ -483,8 +469,83 @@
     grid.appendChild(wrap);
   }
 
+  // --------- ✅ FIX PRINCIPAL: realtime para atualizar stats/meta/histórico quando o OUTRO assina ----------
+  let _unsubEstado = null;
+  let _unsubDia = null;
+  let _currentListeningIdx = null;
+
+  let _updating = false;
+  let _pending = false;
+
+  function scheduleUpdateBibleExtras() {
+    if (_updating) {
+      _pending = true;
+      return;
+    }
+    _updating = true;
+
+    // micro-debounce
+    setTimeout(async () => {
+      try {
+        await updateBibleExtras();
+      } catch (e) {
+        // ignora
+      } finally {
+        _updating = false;
+        if (_pending) {
+          _pending = false;
+          scheduleUpdateBibleExtras();
+        }
+      }
+    }, 120);
+  }
+
+  function bindRealtimeListeners() {
+    if (!window.auth?.currentUser) return;
+    if (!window.bibliaEstadoRef || !window.bibliaLeiturasRef) return;
+
+    // Listener do estado global (dia atual)
+    if (!_unsubEstado) {
+      _unsubEstado = window.bibliaEstadoRef.onSnapshot((snap) => {
+        const data = snap.exists ? (snap.data() || {}) : {};
+        const idx = clamp(Number(data.currentIndex) || 1, 1, 999999);
+
+        // Se mudou o dia, troca o listener do doc do dia
+        if (idx !== _currentListeningIdx) {
+          _currentListeningIdx = idx;
+
+          if (_unsubDia) {
+            _unsubDia();
+            _unsubDia = null;
+          }
+
+          _unsubDia = window.bibliaLeiturasRef.doc("v" + idx).onSnapshot(() => {
+            // ✅ qualquer update (Ash ou Deh) recalcula
+            scheduleUpdateBibleExtras();
+          });
+
+          // recalcula também ao mudar o dia
+          scheduleUpdateBibleExtras();
+        }
+      });
+    }
+
+    // Garante que ao iniciar já tente pegar e criar o listener certo
+    if (_currentListeningIdx == null) {
+      getCurrentIndexSafe().then((idx) => {
+        if (_currentListeningIdx !== idx) {
+          _currentListeningIdx = idx;
+          if (_unsubDia) { _unsubDia(); _unsubDia = null; }
+          _unsubDia = window.bibliaLeiturasRef.doc("v" + idx).onSnapshot(() => {
+            scheduleUpdateBibleExtras();
+          });
+          scheduleUpdateBibleExtras();
+        }
+      }).catch(() => {});
+    }
+  }
+
   async function updateBibleExtras() {
-    // Só roda se existir tela Bíblia
     if (!$("telaBiblia")) return;
 
     ensureRoleSelectedOrAsk();
@@ -493,7 +554,6 @@
     const fromIdx = Math.max(1, currentIndex - (WINDOW_DAYS - 1));
     const docs = await fetchWindowDocs(fromIdx, currentIndex);
 
-    // Stats
     const mePapel = getPapel();
     const otherP = otherPapel(mePapel);
 
@@ -514,7 +574,6 @@
 
     const total = docs.length || 0;
 
-    // Streaks (descendente)
     const docsDesc = docs.slice().sort((a, b) => b.idx - a.idx);
     const meStreak = countStreak(docsDesc, (it) => {
       const d = it.data || {};
@@ -533,11 +592,9 @@
       juntosStreak
     });
 
-    // Hint (usa o doc "hoje" = currentIndex)
     const today = docsDesc.find(x => x.idx === currentIndex) || docsDesc[0] || { data: {} };
     renderHints(mePapel, today.data || {});
 
-    // History calendar
     await renderHistoryGrid(currentIndex, docs);
   }
 
@@ -551,16 +608,21 @@
 
   // ---------- Hooks: após carregar a Bíblia e após marcar leitura ----------
   function patchBibleFunctions() {
-    // Patch carregarBibliaAtual para aplicar tema e atualizar extras
+    // Patch carregarBibliaAtual para aplicar tema, listeners e atualizar extras
     if (typeof window.carregarBibliaAtual === "function" && !window.carregarBibliaAtual.__patched_upgrades__) {
       const original = window.carregarBibliaAtual;
       const patched = async function (...args) {
         const res = await original.apply(this, args);
-        // sempre aplica tema e atualiza extras depois que a UI principal renderizar
         injectBibleExclusiveCSS();
         applyThemeToBibleScreen();
         ensureBackdropModalClose();
-        await updateBibleExtras().catch(() => {});
+
+        // ✅ garante listeners realtime
+        bindRealtimeListeners();
+
+        // atualiza
+        scheduleUpdateBibleExtras();
+
         return res;
       };
       patched.__patched_upgrades__ = true;
@@ -572,8 +634,10 @@
       const original = window.marcarLeituraBiblia;
       const patched = async function (...args) {
         const res = await original.apply(this, args);
-        // atualiza extras após salvar
-        await updateBibleExtras().catch(() => {});
+
+        // ✅ salva ok, recalcula
+        scheduleUpdateBibleExtras();
+
         return res;
       };
       patched.__patched_upgrades__ = true;
@@ -596,10 +660,10 @@
     ensureBackdropModalClose();
     patchBibleFunctions();
 
-    // Se entrar na Bíblia e já estiver logado, tenta atualizar extras
-    // (sem depender de você clicar em algo)
+    // ✅ tenta ligar realtime assim que possível
     setTimeout(() => {
-      updateBibleExtras().catch(() => {});
+      bindRealtimeListeners();
+      scheduleUpdateBibleExtras();
     }, 400);
   }
 
