@@ -112,7 +112,7 @@ function irPara(tela) {
   }
 
   if (tela === "financeiro") aplicarMesNoInput();
-  if (tela === "biblia") carregarBibliaAtual();
+  if (tela === "biblia") carregarBibliaAtual().then(() => bibliaAtualizarStatsEHistory()).catch(() => {});
   if (tela === "cartinhas") cartinhasInitTela();
   if (tela === "cinema") cinemaInitTela();
 
@@ -649,15 +649,38 @@ function verificarVencimentos(forcar) {
    BÍBLIA (SEU CÓDIGO — MANTIDO)
 ========================================================= */
 
-const fallbackPlan = [
-  { ref: "Gênesis 1:1", label: "Dia 1" },
-  { ref: "Gênesis 1:2", label: "Dia 2" },
-  { ref: "Gênesis 1:3", label: "Dia 3" },
-  { ref: "Gênesis 1:4", label: "Dia 4" },
-  { ref: "Gênesis 1:5", label: "Dia 5" },
-  { ref: "Gênesis 1:6", label: "Dia 6" },
-  { ref: "Gênesis 1:7", label: "Dia 7" }
+// ================= BÍBLIA (FALLBACK DO PLANO) =================
+// Se a coleção "biblia_plan" não tiver sido preenchida ainda,
+// a gente gera um fallback que NÃO volta pro início (corrige o bug do 1:7 -> 1:1).
+// Aqui: fallback completo para Gênesis (capítulos 1–50).
+const GENESIS_VERSE_COUNTS = [
+  31,25,24,26,32,22,24,22,29,32,
+  32,20,18,24,21,16,27,33,38,18,
+  34,24,20,67,34,35,46,22,35,43,
+  55,32,20,31,29,43,36,30,23,23,
+  57,38,34,34,28,34,31,22,33,26
 ];
+
+function bibliaFallbackByIndex(idx) {
+  const index = Math.max(1, Number(idx) || 1);
+
+  const totalGenesis = GENESIS_VERSE_COUNTS.reduce((a, b) => a + b, 0);
+  let rem = ((index - 1) % totalGenesis) + 1; // se passar do fim, dá a volta
+
+  for (let chap = 1; chap <= GENESIS_VERSE_COUNTS.length; chap++) {
+    const maxV = GENESIS_VERSE_COUNTS[chap - 1];
+    if (rem <= maxV) {
+      return {
+        ref: `Gênesis ${chap}:${rem}`,
+        label: `Dia ${index}`
+      };
+    }
+    rem -= maxV;
+  }
+
+  // fallback de segurança (não deve acontecer)
+  return { ref: "Gênesis 1:1", label: `Dia ${index}` };
+}
 
 function pararBibliaListener() {
   if (unsubscribeBibliaDia) unsubscribeBibliaDia();
@@ -844,7 +867,7 @@ async function carregarBibliaAtual(viaListener = false) {
   } catch (e) {}
 
   if (!refTexto) {
-    const fb = fallbackPlan[(currentIndex - 1) % fallbackPlan.length];
+    const fb = bibliaFallbackByIndex(currentIndex);
     refTexto = fb.ref;
     labelTexto = fb.label ? fb.label : `Dia ${currentIndex}`;
   }
@@ -892,6 +915,8 @@ async function carregarBibliaAtual(viaListener = false) {
       { ref: refTexto, label: labelTexto, dayIndex: currentIndex },
       { merge: true }
     );
+    // mantém cache atualizado (evita histórico ficar "pendente" até recarregar)
+    bibliaLeiturasCache[currentIndex] = Object.assign({}, bibliaLeiturasCache[currentIndex] || {}, { ref: refTexto, label: labelTexto, dayIndex: currentIndex });
   } catch (e) {}
 }
 
@@ -975,6 +1000,10 @@ async function marcarLeituraBiblia(lido) {
   }
 
   const payload = {};
+
+  // garante que o histórico/stats consiga mapear o dia
+  payload.dayIndex = bibliaCurrentIndex;
+
   if (papel === "eu") {
     payload.euLido = !!lido;
     payload.euEmail = user.email || "";
@@ -987,10 +1016,307 @@ async function marcarLeituraBiblia(lido) {
 
   try {
     await bibliaLeiturasRef.doc(bibliaCurrentDocId).set(payload, { merge: true });
+    bibliaAtualizarStatsEHistory().catch(() => {});
   } catch (e) {
     alert("Erro ao salvar leitura: " + (e.message || e));
   }
 }
+
+
+// ================= BÍBLIA (CHECKLIST) — STATS + HISTÓRICO =================
+// ⚠️ Importante: o plano começa em 2026-01-01 (Dia 1).
+const BIBLIA_START_DATE = "2026-01-01"; // YYYY-MM-DD (hora local do aparelho)
+
+let bibliaHistoryFocusDate = null; // Date (mês exibido no histórico)
+let bibliaLeiturasCache = {};      // { [dayIndex:number]: {euLido?:bool, elaLido?:bool, ...} }
+
+function bibliaParseStartDate() {
+  // Constrói meia-noite local do dia inicial (evita timezone bagunçar o índice)
+  const [y, m, d] = BIBLIA_START_DATE.split("-").map(n => parseInt(n, 10));
+  return new Date(y, (m || 1) - 1, d || 1, 0, 0, 0, 0);
+}
+
+function bibliaHojeDayIndex() {
+  const start = bibliaParseStartDate();
+  const hoje = new Date();
+  const hoje0 = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate(), 0, 0, 0, 0);
+  const diffMs = hoje0.getTime() - start.getTime();
+  const diffDays = Math.floor(diffMs / 86400000);
+  return Math.max(1, diffDays + 1);
+}
+
+function bibliaDateFromDayIndex(dayIndex) {
+  const start = bibliaParseStartDate();
+  const d = new Date(start.getTime());
+  d.setDate(d.getDate() + (Math.max(1, Number(dayIndex) || 1) - 1));
+  return d;
+}
+
+function bibliaFmtYMD(dateObj) {
+  const y = dateObj.getFullYear();
+  const m = String(dateObj.getMonth() + 1).padStart(2, "0");
+  const d = String(dateObj.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function bibliaDayStatus(dayIndex) {
+  const r = bibliaLeiturasCache[dayIndex] || {};
+  const eu = !!r.euLido;
+  const ela = !!r.elaLido;
+  if (eu && ela) return "both";
+  if (eu) return "eu";
+  if (ela) return "ela";
+  return "pendente";
+}
+
+async function bibliaCarregarLeiturasAteHoje() {
+  const user = auth.currentUser;
+  if (!user) return;
+
+  const hojeIdx = bibliaHojeDayIndex();
+  const map = {};
+
+  // Dia atual é pequeno (ex.: dia 8). Buscar v1..vN é simples e confiável.
+  const reads = [];
+  for (let i = 1; i <= hojeIdx; i++) {
+    reads.push(bibliaLeiturasRef.doc("v" + i).get().then(s => ({ i, s })).catch(() => ({ i, s: null })));
+  }
+
+  const results = await Promise.all(reads);
+  results.forEach(({ i, s }) => {
+    if (s && s.exists) map[i] = (s.data() || {});
+  });
+
+  bibliaLeiturasCache = map;
+
+  // Auto-preencher dayIndex nos docs antigos, se existir doc mas não tiver dayIndex
+  const patches = [];
+  Object.keys(map).forEach(k => {
+    const i = Number(k);
+    const d = map[i] || {};
+    if (d && typeof d.dayIndex !== "number") {
+      patches.push(bibliaLeiturasRef.doc("v" + i).set({ dayIndex: i }, { merge: true }).catch(() => {}));
+    }
+  });
+  if (patches.length) await Promise.all(patches);
+}
+
+function bibliaCalcularStreak(tipo) {
+  const hojeIdx = bibliaHojeDayIndex();
+  let streak = 0;
+
+  for (let i = hojeIdx; i >= 1; i--) {
+    const r = bibliaLeiturasCache[i] || {};
+    const ok =
+      tipo === "eu" ? !!r.euLido :
+      tipo === "ela" ? !!r.elaLido :
+      (!!r.euLido && !!r.elaLido);
+
+    if (ok) streak++;
+    else break;
+  }
+  return streak;
+}
+
+function bibliaCalcularConsistencia(tipo) {
+  const hojeIdx = bibliaHojeDayIndex();
+  if (hojeIdx <= 0) return 0;
+
+  let ok = 0;
+  for (let i = 1; i <= hojeIdx; i++) {
+    const r = bibliaLeiturasCache[i] || {};
+    const done =
+      tipo === "eu" ? !!r.euLido :
+      tipo === "ela" ? !!r.elaLido :
+      (!!r.euLido && !!r.elaLido);
+    if (done) ok++;
+  }
+  return Math.round((ok / hojeIdx) * 100);
+}
+
+function bibliaGerarHint() {
+  const hojeIdx = bibliaHojeDayIndex();
+  const rHoje = bibliaLeiturasCache[hojeIdx] || {};
+  const eu = !!rHoje.euLido;
+  const ela = !!rHoje.elaLido;
+
+  if (eu && ela) return "Hoje tá pago! 💜 Agora é só manter a sequência.";
+  if (eu && !ela) return "Você já assinou hoje. Falta ela pra fechar o dia ✨";
+  if (!eu && ela) return "Ela já assinou hoje. Falta você pra fechar o dia ✨";
+  return "Dica: assinem os dois no mesmo dia pra ganhar a medalha de 7 dias seguidos 🏅";
+}
+
+function bibliaRenderHistoricoMes() {
+  const grid = document.getElementById("bibHistoryGrid");
+  if (!grid) return;
+
+  const hoje = new Date();
+  if (!bibliaHistoryFocusDate) bibliaHistoryFocusDate = hoje;
+
+  const focus = new Date(bibliaHistoryFocusDate.getFullYear(), bibliaHistoryFocusDate.getMonth(), 1);
+  const year = focus.getFullYear();
+  const month = focus.getMonth();
+
+  const first = new Date(year, month, 1);
+  const last = new Date(year, month + 1, 0);
+  const daysInMonth = last.getDate();
+
+  const labelMes = first.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+
+  let html = `
+    <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin:8px 0 10px;">
+      <span style="font-size:12px; opacity:.75;">${labelMes}</span>
+      <span style="font-size:12px; opacity:.6;">(Dia 1 = ${BIBLIA_START_DATE})</span>
+    </div>
+    <div style="display:grid; grid-template-columns: repeat(7, 1fr); gap:6px;">
+  `;
+
+  const weekdays = ["D", "S", "T", "Q", "Q", "S", "S"];
+  weekdays.forEach(w => {
+    html += `<div style="text-align:center; font-size:11px; opacity:.55; padding:2px 0;">${w}</div>`;
+  });
+
+  const startWeekday = first.getDay(); // 0=Dom
+  for (let i = 0; i < startWeekday; i++) {
+    html += `<div></div>`;
+  }
+
+  const startDate = bibliaParseStartDate();
+  const hoje0 = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate(), 0, 0, 0, 0);
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dateObj = new Date(year, month, day, 0, 0, 0, 0);
+
+    // Dia fora do plano
+    if (dateObj.getTime() < startDate.getTime()) {
+      html += `<div style="opacity:.25; border:1px dashed rgba(255,255,255,.18); border-radius:10px; padding:10px 0; text-align:center;">${day}</div>`;
+      continue;
+    }
+
+    const dayIndex = Math.floor((dateObj.getTime() - startDate.getTime()) / 86400000) + 1;
+
+    const isFuture = dateObj.getTime() > hoje0.getTime();
+    const status = bibliaDayStatus(dayIndex);
+
+    const baseStyle = "border-radius:12px; padding:10px 0; text-align:center; cursor:pointer; user-select:none; border:1px solid rgba(255,255,255,.12);";
+    const disabledStyle = "opacity:.35; cursor:not-allowed;";
+
+    let badge = "";
+    if (status === "both") badge = "✅";
+    else if (status === "eu") badge = "🖊️";
+    else if (status === "ela") badge = "💜";
+    else badge = "⏳";
+
+    const todayMark = (dateObj.getTime() === hoje0.getTime()) ? "box-shadow: 0 0 0 2px rgba(255,255,255,.28) inset;" : "";
+
+    html += `
+      <div
+        style="${baseStyle} ${todayMark} ${isFuture ? disabledStyle : ""}"
+        ${isFuture ? "" : `onclick="bibliaAbrirDia(${dayIndex})"`}
+        title="${bibliaFmtYMD(dateObj)} • Dia ${dayIndex} • ${status}"
+      >
+        <div style="font-size:12px; opacity:.85;">${badge}</div>
+        <div style="font-size:13px; font-weight:700;">${day}</div>
+        <div style="font-size:10px; opacity:.55;">D${dayIndex}</div>
+      </div>
+    `;
+  }
+
+  html += `</div>`;
+
+  grid.innerHTML = html;
+}
+
+async function bibliaAtualizarStatsEHistory() {
+  const user = auth.currentUser;
+  if (!user) return;
+
+  await bibliaCarregarLeiturasAteHoje();
+
+  const streakEu = bibliaCalcularStreak("eu");
+  const streakEla = bibliaCalcularStreak("ela");
+  const streakBoth = bibliaCalcularStreak("both");
+
+  const consEu = bibliaCalcularConsistencia("eu");
+  const consEla = bibliaCalcularConsistencia("ela");
+  const consBoth = bibliaCalcularConsistencia("both");
+
+  const stats = document.getElementById("bibStatsLine");
+  if (stats) {
+    stats.textContent =
+      `🔥 Streak — Eu: ${streakEu} • Ela: ${streakEla} • Juntos: ${streakBoth}  |  ` +
+      `📈 Consistência — Eu: ${consEu}% • Ela: ${consEla}% • Juntos: ${consBoth}%`;
+  }
+
+  const hint = document.getElementById("bibHintLine");
+  if (hint) hint.textContent = bibliaGerarHint();
+
+  const medal = document.getElementById("bibStreakMedal");
+  if (medal) medal.style.display = (streakBoth >= 7) ? "inline-flex" : "none";
+
+  bibliaRenderHistoricoMes();
+}
+
+// ========= Ações da UI (botões / modal) =========
+function bibliaVoltarParaHoje() {
+  bibliaHistoryFocusDate = new Date();
+  const hojeIdx = bibliaHojeDayIndex();
+  bibliaAbrirDia(hojeIdx);
+}
+
+function bibliaAbrirDia(dayIndex) {
+  const idx = Math.max(1, Number(dayIndex) || 1);
+  bibliaCurrentIndex = idx;
+  bibliaCurrentDocId = "v" + idx;
+
+  // Atualiza o "estado global" pra virar a página sincronizado pros dois
+  bibliaEstadoRef.set({
+    currentIndex: idx,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  }, { merge: true }).catch(() => {});
+
+  carregarBibliaAtual().then(() => bibliaAtualizarStatsEHistory()).catch(() => {});
+}
+
+function bibliaAbrirNoApp() {
+  alert("Dica: abra o versículo no app de Bíblia que vocês preferirem (YouVersion, Bíblia Sagrada, etc.) 💜");
+}
+
+function bibliaToggleTema() {
+  // Toggle simples apenas para a área da Bíblia
+  const paper = document.getElementById("biblePaper");
+  if (!paper) return;
+  const on = paper.classList.toggle("biblePaperDark");
+  localStorage.setItem("biblia_theme_dark", on ? "1" : "0");
+}
+
+function bibliaAbrirPapelModal() {
+  const modal = document.getElementById("bibRoleModal");
+  if (modal) modal.style.display = "block";
+}
+
+function bibliaFecharPapelModal() {
+  const modal = document.getElementById("bibRoleModal");
+  if (modal) modal.style.display = "none";
+}
+
+function bibliaDefinirPapel(quem) {
+  // HTML usa "ash" | "deh". No script usamos "eu" | "ela".
+  const papel = (quem === "ash") ? "eu" : "ela";
+  localStorage.setItem("biblia_papel", papel);
+  bibliaFecharPapelModal();
+  carregarBibliaAtual().then(() => bibliaAtualizarStatsEHistory()).catch(() => {});
+}
+
+// expõe pro HTML
+window.bibliaVoltarParaHoje = bibliaVoltarParaHoje;
+window.bibliaAbrirDia = bibliaAbrirDia;
+window.bibliaAbrirNoApp = bibliaAbrirNoApp;
+window.bibliaToggleTema = bibliaToggleTema;
+window.bibliaAbrirPapelModal = bibliaAbrirPapelModal;
+window.bibliaFecharPapelModal = bibliaFecharPapelModal;
+window.bibliaDefinirPapel = bibliaDefinirPapel;
+
 
 /* =========================================================
    💌 CARTINHAS (SEU CÓDIGO — MANTIDO)
@@ -2635,3 +2961,4 @@ window.tttEntrarSalaPeloInput = tttEntrarSalaPeloInput;
 window.tttSairDaSala = tttSairDaSala;
 window.tttReiniciar = tttReiniciar;
 window.tttJogar = tttJogar;
+
